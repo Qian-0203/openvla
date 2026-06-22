@@ -32,6 +32,7 @@ import wandb
 
 # Append current directory so that interpreter can find experiments.robot
 sys.path.append("../..")
+from experiments.robot.libero.explicit_instructions import LIBERO_SPATIAL_EXPLICIT_INSTRUCTIONS
 from experiments.robot.libero.libero_utils import (
     get_libero_dummy_action,
     get_libero_env,
@@ -71,6 +72,9 @@ class GenerateConfig:
     task_suite_name: str = "libero_spatial"          # Task suite. Options: libero_spatial, libero_object, libero_goal, libero_10, libero_90
     num_steps_wait: int = 10                         # Number of steps to wait for objects to stabilize in sim
     num_trials_per_task: int = 50                    # Number of rollouts per task
+
+    use_explicit_prompt: bool = False                # Override task language with distractor-aware explicit instructions
+                                                     # (libero_spatial only). Scenes/init states are unchanged.
 
     #################################################################################################################
     # Utils
@@ -154,6 +158,15 @@ def eval_libero(cfg: GenerateConfig) -> None:
 
         # Initialize LIBERO environment and task description
         env, task_description = get_libero_env(task, cfg.model_family, resolution=256)
+
+        # Optionally override the task language with a distractor-aware explicit instruction.
+        # The scene/init states are identical; only the prompt fed to the model changes.
+        if cfg.use_explicit_prompt:
+            assert task.name in LIBERO_SPATIAL_EXPLICIT_INSTRUCTIONS, (
+                f"No explicit instruction defined for task '{task.name}'. "
+                "use_explicit_prompt currently only supports libero_spatial."
+            )
+            task_description = LIBERO_SPATIAL_EXPLICIT_INSTRUCTIONS[task.name]
 
         # Start episodes
         task_episodes, task_successes = 0, 0
