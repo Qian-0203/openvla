@@ -88,12 +88,21 @@ class GenerateConfig:
 
     seed: int = 7                                    # Random Seed (for reproducibility)
 
+    #################################################################################################################
+    # Multi-GPU sharding (data parallelism across processes)
+    #################################################################################################################
+    num_shards: int = 1                              # Total number of parallel eval processes (e.g. one per GPU)
+    shard_index: int = 0                             # This process's shard id in [0, num_shards). Tasks are
+                                                     # round-robin assigned via (task_id % num_shards == shard_index).
+
     # fmt: on
 
 
 @draccus.wrap()
 def eval_libero(cfg: GenerateConfig) -> None:
     assert cfg.pretrained_checkpoint is not None, "cfg.pretrained_checkpoint must not be None!"
+    assert cfg.num_shards >= 1, "cfg.num_shards must be >= 1!"
+    assert 0 <= cfg.shard_index < cfg.num_shards, "cfg.shard_index must be in [0, num_shards)!"
     if "image_aug" in cfg.pretrained_checkpoint:
         assert cfg.center_crop, "Expecting `center_crop==True` because model was trained with image augmentations!"
     assert not (cfg.load_in_8bit and cfg.load_in_4bit), "Cannot use both 8-bit and 4-bit quantization!"
@@ -124,6 +133,8 @@ def eval_libero(cfg: GenerateConfig) -> None:
     run_id = f"EVAL-{cfg.task_suite_name}-{cfg.model_family}-{DATE_TIME}"
     if cfg.run_id_note is not None:
         run_id += f"--{cfg.run_id_note}"
+    if cfg.num_shards > 1:
+        run_id += f"--shard{cfg.shard_index}of{cfg.num_shards}"
     os.makedirs(cfg.local_log_dir, exist_ok=True)
     local_log_filepath = os.path.join(cfg.local_log_dir, run_id + ".txt")
     log_file = open(local_log_filepath, "w")
@@ -147,9 +158,15 @@ def eval_libero(cfg: GenerateConfig) -> None:
     # Get expected image dimensions
     resize_size = get_image_resize_size(cfg)
 
+    # Determine which tasks this shard is responsible for (round-robin across processes)
+    shard_task_ids = [t for t in range(num_tasks_in_suite) if t % cfg.num_shards == cfg.shard_index]
+    if cfg.num_shards > 1:
+        print(f"Shard {cfg.shard_index}/{cfg.num_shards} handling task ids: {shard_task_ids}")
+        log_file.write(f"Shard {cfg.shard_index}/{cfg.num_shards} handling task ids: {shard_task_ids}\n")
+
     # Start evaluation
     total_episodes, total_successes = 0, 0
-    for task_id in tqdm.tqdm(range(num_tasks_in_suite)):
+    for task_id in tqdm.tqdm(shard_task_ids):
         # Get task
         task = task_suite.get_task(task_id)
 
