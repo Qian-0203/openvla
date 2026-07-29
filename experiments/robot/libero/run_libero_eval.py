@@ -73,6 +73,11 @@ class GenerateConfig:
     num_steps_wait: int = 10                         # Number of steps to wait for objects to stabilize in sim
     num_trials_per_task: int = 50                    # Number of rollouts per task
 
+    unnorm_key: Optional[str] = None                 # Action un-norm key override. Defaults to task_suite_name.
+                                                     # Set this when evaluating a scene variant whose suite name
+                                                     # differs from the training dataset (e.g. libero_spatial_3bowl
+                                                     # -> pass "libero_spatial" so stats resolve to the trained key).
+
     use_explicit_prompt: bool = False                # Override task language with distractor-aware explicit instructions
                                                      # (libero_spatial only). Scenes/init states are unchanged.
 
@@ -110,8 +115,8 @@ def eval_libero(cfg: GenerateConfig) -> None:
     # Set random seed
     set_seed_everywhere(cfg.seed)
 
-    # [OpenVLA] Set action un-normalization key
-    cfg.unnorm_key = cfg.task_suite_name
+    # [OpenVLA] Set action un-normalization key (falls back to the task suite name)
+    cfg.unnorm_key = cfg.unnorm_key or cfg.task_suite_name
 
     # Load model
     model = get_model(cfg)
@@ -200,7 +205,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
             # Setup
             t = 0
             replay_images = []
-            if cfg.task_suite_name == "libero_spatial":
+            if cfg.task_suite_name in ("libero_spatial", "libero_spatial_3bowl"):
                 max_steps = 220  # longest training demo has 193 steps
             elif cfg.task_suite_name == "libero_object":
                 max_steps = 280  # longest training demo has 254 steps
