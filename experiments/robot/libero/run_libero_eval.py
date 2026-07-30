@@ -32,7 +32,10 @@ import wandb
 
 # Append current directory so that interpreter can find experiments.robot
 sys.path.append("../..")
-from experiments.robot.libero.explicit_instructions import LIBERO_SPATIAL_EXPLICIT_INSTRUCTIONS
+from experiments.robot.libero.explicit_instructions import (
+    LIBERO_SPATIAL_EXPLICIT_INSTRUCTIONS,
+    LIBERO_SPATIAL_HARDNEG_INSTRUCTIONS,
+)
 from experiments.robot.libero.libero_utils import (
     get_libero_dummy_action,
     get_libero_env,
@@ -183,12 +186,19 @@ def eval_libero(cfg: GenerateConfig) -> None:
 
         # Optionally override the task language with a distractor-aware explicit instruction.
         # The scene/init states are identical; only the prompt fed to the model changes.
+        # For the hard-negative suite the explicit set names the target vs. the near-landmark
+        # hard negative ("the closest one …"); otherwise the standard 2-bowl explicit set is used.
         if cfg.use_explicit_prompt:
-            assert task.name in LIBERO_SPATIAL_EXPLICIT_INSTRUCTIONS, (
-                f"No explicit instruction defined for task '{task.name}'. "
-                "use_explicit_prompt currently only supports libero_spatial."
+            explicit_map = (
+                LIBERO_SPATIAL_HARDNEG_INSTRUCTIONS
+                if "hardneg" in cfg.task_suite_name
+                else LIBERO_SPATIAL_EXPLICIT_INSTRUCTIONS
             )
-            task_description = LIBERO_SPATIAL_EXPLICIT_INSTRUCTIONS[task.name]
+            assert task.name in explicit_map, (
+                f"No explicit instruction defined for task '{task.name}' "
+                f"(suite '{cfg.task_suite_name}')."
+            )
+            task_description = explicit_map[task.name]
 
         # Start episodes
         task_episodes, task_successes = 0, 0
@@ -205,7 +215,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
             # Setup
             t = 0
             replay_images = []
-            if cfg.task_suite_name in ("libero_spatial", "libero_spatial_3bowl"):
+            if cfg.task_suite_name.startswith("libero_spatial"):
                 max_steps = 220  # longest training demo has 193 steps
             elif cfg.task_suite_name == "libero_object":
                 max_steps = 280  # longest training demo has 254 steps
