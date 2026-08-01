@@ -54,7 +54,7 @@ LIBERO_SPATIAL_HARDNEG_INSTRUCTIONS = {
     "pick_up_the_black_bowl_next_to_the_ramekin_and_place_it_on_the_plate":
         "pick up the black bowl closest to the ramekin, not the one farther from it, and place it on the plate",
     "pick_up_the_black_bowl_from_table_center_and_place_it_on_the_plate":
-        "pick up the black bowl at the center of the table, not the one behind it toward the ramekin, and place it on the plate",
+        "pick up the black bowl at the center of the table, not the one off to the side, and place it on the plate",
     "pick_up_the_black_bowl_on_the_cookie_box_and_place_it_on_the_plate":
         "pick up the black bowl on top of the cookie box, not the one on the table next to it, and place it on the plate",
     "pick_up_the_black_bowl_in_the_top_drawer_of_the_wooden_cabinet_and_place_it_on_the_plate":
