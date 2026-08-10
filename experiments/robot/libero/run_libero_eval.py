@@ -1,7 +1,10 @@
 """
 run_libero_eval.py
 
-Runs a model in a LIBERO simulation environment.
+Runs a model in a LIBERO simulation environment. Single canonical entry point
+for every benchmark split in vla_ws/benchmark_split.md -- pick a split with
+`--split` (see experiments/robot/libero/eval_registry.py for the full list)
+or fall back to manually setting `--task_suite_name`/`--unnorm_key`/`--condition`.
 
 Usage:
     # OpenVLA:
@@ -9,15 +12,24 @@ Usage:
     python experiments/robot/libero/run_libero_eval.py \
         --model_family openvla \
         --pretrained_checkpoint <CHECKPOINT_PATH> \
-        --task_suite_name [ libero_spatial | libero_object | libero_goal | libero_10 | libero_90 ] \
-        --center_crop [ True | False ] \
+        --split spatial/default \
+        --center_crop True \
         --run_id_note <OPTIONAL TAG TO INSERT INTO RUN ID FOR LOGGING> \
         --use_wandb [ True | False ] \
         --wandb_project <PROJECT> \
         --wandb_entity <ENTITY>
+
+Resuming: pass --resume True to skip (task_id, episode_idx) pairs already
+recorded in the run's results JSONL file; pass --overwrite True to discard an
+existing results file for the same (task_suite_name, condition, run_id_note,
+shard) and start over. Without either flag, re-running into an existing
+results file is an error.
 """
 
+import json
 import os
+import platform
+import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -25,6 +37,7 @@ from typing import Optional, Union
 
 import draccus
 import numpy as np
+import torch
 import tqdm
 from libero.libero import benchmark
 
@@ -32,10 +45,7 @@ import wandb
 
 # Append current directory so that interpreter can find experiments.robot
 sys.path.append("../..")
-from experiments.robot.libero.explicit_instructions import (
-    LIBERO_SPATIAL_EXPLICIT_INSTRUCTIONS,
-    LIBERO_SPATIAL_HARDNEG_INSTRUCTIONS,
-)
+from experiments.robot.libero.eval_registry import CONDITIONS, resolve_split
 from experiments.robot.libero.libero_utils import (
     get_libero_dummy_action,
     get_libero_env,
@@ -72,7 +82,13 @@ class GenerateConfig:
     #################################################################################################################
     # LIBERO environment-specific parameters
     #################################################################################################################
+    split: Optional[str] = None                       # Benchmark split id (see eval_registry.SPLITS), e.g.
+                                                       # "spatial/default". Sets task_suite_name/unnorm_key/condition
+                                                       # below; leave those at their defaults when using --split.
     task_suite_name: str = "libero_spatial"          # Task suite. Options: libero_spatial, libero_object, libero_goal, libero_10, libero_90
+                                                       # (plus the scene variants registered in eval_registry.SPLITS)
+    task_ids: Optional[str] = None                    # Optional comma-separated task id filter (e.g. "0,3,7"),
+                                                       # applied on top of shard sharding. Default: all tasks in the suite.
     num_steps_wait: int = 10                         # Number of steps to wait for objects to stabilize in sim
     num_trials_per_task: int = 50                    # Number of rollouts per task
 
@@ -81,14 +97,17 @@ class GenerateConfig:
                                                      # differs from the training dataset (e.g. libero_spatial_3bowl
                                                      # -> pass "libero_spatial" so stats resolve to the trained key).
 
-    use_explicit_prompt: bool = False                # Override task language with distractor-aware explicit instructions
-                                                     # (libero_spatial only). Scenes/init states are unchanged.
+    condition: str = "default"                       # Instruction condition (see eval_registry.CONDITIONS):
+                                                       # "default" | "negative_contrast" | "positive_contrast" | "hardneg".
+                                                       # Scenes/init states are unchanged; only the prompt text changes.
 
     #################################################################################################################
     # Utils
     #################################################################################################################
     run_id_note: Optional[str] = None                # Extra note to add in run ID for logging
     local_log_dir: str = "./experiments/logs"        # Local directory for eval logs
+    resume: bool = False                              # Skip (task_id, episode_idx) pairs already in the results JSONL
+    overwrite: bool = False                           # Discard an existing results JSONL for this run and start over
 
     use_wandb: bool = False                          # Whether to also log results in Weights & Biases
     wandb_project: str = "YOUR_WANDB_PROJECT"        # Name of W&B project to log to (use default!)
@@ -114,6 +133,13 @@ def eval_libero(cfg: GenerateConfig) -> None:
     if "image_aug" in cfg.pretrained_checkpoint:
         assert cfg.center_crop, "Expecting `center_crop==True` because model was trained with image augmentations!"
     assert not (cfg.load_in_8bit and cfg.load_in_4bit), "Cannot use both 8-bit and 4-bit quantization!"
+    assert not (cfg.resume and cfg.overwrite), "Cannot set both --resume and --overwrite!"
+
+    # Resolve --split into (task_suite_name, unnorm_key, condition). CLI values for
+    # those three fields are ignored when --split is given -- see eval_registry.py.
+    if cfg.split is not None:
+        cfg.task_suite_name, cfg.unnorm_key, cfg.condition = resolve_split(cfg.split)
+    assert cfg.condition in CONDITIONS, f"Unknown condition '{cfg.condition}'. Available: {sorted(CONDITIONS)}"
 
     # Set random seed
     set_seed_everywhere(cfg.seed)
@@ -137,16 +163,70 @@ def eval_libero(cfg: GenerateConfig) -> None:
     if cfg.model_family == "openvla":
         processor = get_processor(cfg)
 
-    # Initialize local logging
+    # Initialize local logging. `run_id` is timestamped (unique per invocation, matches
+    # the pre-existing log naming convention); `run_key` is stable (no timestamp) and
+    # identifies the results JSONL used for resume/overwrite and aggregation.
     run_id = f"EVAL-{cfg.task_suite_name}-{cfg.model_family}-{DATE_TIME}"
+    run_key = f"{cfg.task_suite_name}--{cfg.condition}"
     if cfg.run_id_note is not None:
         run_id += f"--{cfg.run_id_note}"
+        run_key += f"--{cfg.run_id_note}"
     if cfg.num_shards > 1:
         run_id += f"--shard{cfg.shard_index}of{cfg.num_shards}"
+        run_key += f"--shard{cfg.shard_index}of{cfg.num_shards}"
     os.makedirs(cfg.local_log_dir, exist_ok=True)
+    results_dir = os.path.join(cfg.local_log_dir, "results")
+    os.makedirs(results_dir, exist_ok=True)
     local_log_filepath = os.path.join(cfg.local_log_dir, run_id + ".txt")
     log_file = open(local_log_filepath, "w")
     print(f"Logging to local log file: {local_log_filepath}")
+
+    # Structured per-rollout results (one JSON object per line), used for resume and
+    # for scripts/aggregate_results.py. Stable path (no timestamp) so re-running the
+    # same split/condition/note/shard finds its own prior results.
+    results_jsonl_path = os.path.join(results_dir, run_key + ".jsonl")
+    completed_rollouts = {}  # {(task_id, episode_idx): success} already recorded
+    if os.path.exists(results_jsonl_path):
+        if cfg.overwrite:
+            os.remove(results_jsonl_path)
+        elif cfg.resume:
+            with open(results_jsonl_path, "r") as f:
+                for line in f:
+                    rec = json.loads(line)
+                    completed_rollouts[(rec["task_id"], rec["episode_idx"])] = rec["success"]
+            print(f"Resuming: {len(completed_rollouts)} rollouts already recorded in {results_jsonl_path}")
+        else:
+            raise FileExistsError(
+                f"Results file already exists: {results_jsonl_path}\n"
+                "Pass --resume True to continue it, or --overwrite True to discard and restart."
+            )
+    results_file = open(results_jsonl_path, "a")
+
+    # Record run metadata (config, checkpoint, git commit, environment, timestamp) once,
+    # next to the results file, so a results JSONL is self-describing.
+    def _git_commit(repo_dir):
+        try:
+            return subprocess.check_output(
+                ["git", "rev-parse", "HEAD"], cwd=repo_dir, stderr=subprocess.DEVNULL
+            ).decode().strip()
+        except Exception:
+            return None
+
+    metadata = {
+        "run_id": run_id,
+        "run_key": run_key,
+        "timestamp": DATE_TIME,
+        "config": {k: str(v) for k, v in vars(cfg).items()},
+        "openvla_git_commit": _git_commit(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        ),
+        "python_version": platform.python_version(),
+        "torch_version": torch.__version__,
+        "cuda_available": torch.cuda.is_available(),
+        "gpu_name": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,
+    }
+    with open(os.path.join(results_dir, run_key + ".meta.json"), "w") as f:
+        json.dump(metadata, f, indent=2)
 
     # Initialize Weights & Biases logging as well
     if cfg.use_wandb:
@@ -168,6 +248,9 @@ def eval_libero(cfg: GenerateConfig) -> None:
 
     # Determine which tasks this shard is responsible for (round-robin across processes)
     shard_task_ids = [t for t in range(num_tasks_in_suite) if t % cfg.num_shards == cfg.shard_index]
+    if cfg.task_ids is not None:
+        requested = {int(t) for t in cfg.task_ids.split(",")}
+        shard_task_ids = [t for t in shard_task_ids if t in requested]
     if cfg.num_shards > 1:
         print(f"Shard {cfg.shard_index}/{cfg.num_shards} handling task ids: {shard_task_ids}")
         log_file.write(f"Shard {cfg.shard_index}/{cfg.num_shards} handling task ids: {shard_task_ids}\n")
@@ -184,25 +267,27 @@ def eval_libero(cfg: GenerateConfig) -> None:
         # Initialize LIBERO environment and task description
         env, task_description = get_libero_env(task, cfg.model_family, resolution=256)
 
-        # Optionally override the task language with a distractor-aware explicit instruction.
+        # Optionally override the task language per cfg.condition (see eval_registry.CONDITIONS).
         # The scene/init states are identical; only the prompt fed to the model changes.
-        # For the hard-negative suite the explicit set names the target vs. the near-landmark
-        # hard negative ("the closest one …"); otherwise the standard 2-bowl explicit set is used.
-        if cfg.use_explicit_prompt:
-            explicit_map = (
-                LIBERO_SPATIAL_HARDNEG_INSTRUCTIONS
-                if "hardneg" in cfg.task_suite_name
-                else LIBERO_SPATIAL_EXPLICIT_INSTRUCTIONS
-            )
-            assert task.name in explicit_map, (
-                f"No explicit instruction defined for task '{task.name}' "
+        instruction_map = CONDITIONS[cfg.condition]
+        if instruction_map is not None:
+            assert task.name in instruction_map, (
+                f"No '{cfg.condition}' instruction defined for task '{task.name}' "
                 f"(suite '{cfg.task_suite_name}')."
             )
-            task_description = explicit_map[task.name]
+            task_description = instruction_map[task.name]
 
         # Start episodes
         task_episodes, task_successes = 0, 0
         for episode_idx in tqdm.tqdm(range(cfg.num_trials_per_task)):
+            if (task_id, episode_idx) in completed_rollouts:
+                task_episodes += 1
+                total_episodes += 1
+                if completed_rollouts[(task_id, episode_idx)]:
+                    task_successes += 1
+                    total_successes += 1
+                continue
+
             print(f"\nTask: {task_description}")
             log_file.write(f"\nTask: {task_description}\n")
 
@@ -290,6 +375,19 @@ def eval_libero(cfg: GenerateConfig) -> None:
                 replay_images, total_episodes, success=done, task_description=task_description, log_file=log_file
             )
 
+            # Record this rollout as one JSON line (flushed immediately so a killed/resumed
+            # run never loses completed rollouts).
+            results_file.write(json.dumps({
+                "task_id": task_id,
+                "task_name": task.name,
+                "task_suite_name": cfg.task_suite_name,
+                "condition": cfg.condition,
+                "episode_idx": episode_idx,
+                "success": bool(done),
+                "num_steps": t,
+            }) + "\n")
+            results_file.flush()
+
             # Log current results
             print(f"Success: {done}")
             print(f"# episodes completed so far: {total_episodes}")
@@ -313,8 +411,10 @@ def eval_libero(cfg: GenerateConfig) -> None:
                 }
             )
 
-    # Save local log file
+    # Save local log files
     log_file.close()
+    results_file.close()
+    print(f"Structured results: {results_jsonl_path}")
 
     # Push total metrics and local log file to wandb
     if cfg.use_wandb:

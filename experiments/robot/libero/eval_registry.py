@@ -1,0 +1,145 @@
+"""
+eval_registry.py
+
+Single canonical registry mapping a benchmark "split" (as specified in
+vla_ws/benchmark_split.md) to the concrete (task_suite_name, unnorm_key,
+condition) triple `run_libero_eval.py` needs, plus the instruction dict each
+`condition` resolves to. This is the one place that knows how splits map onto
+LIBERO task suites -- docker/openvla_libero/run_eval.sh and any future caller
+should only ever pass `--split`, never hand-set suite/condition themselves.
+
+Adding a split = add one entry to SPLITS (see benchmark_split.md "How to add a
+benchmark split").
+"""
+
+from experiments.robot.libero.instructions import (
+    LIBERO_SPATIAL_EXPLICIT_INSTRUCTIONS,
+    LIBERO_SPATIAL_HARDNEG_INSTRUCTIONS,
+    LIBERO_SPATIAL_POSITIVE_CONTRAST_INSTRUCTIONS,
+)
+
+# condition -> instruction dict (None = use LIBERO's own default task language)
+CONDITIONS = {
+    "default": None,
+    "negative_contrast": LIBERO_SPATIAL_EXPLICIT_INSTRUCTIONS,
+    "positive_contrast": LIBERO_SPATIAL_POSITIVE_CONTRAST_INSTRUCTIONS,
+    "hardneg": LIBERO_SPATIAL_HARDNEG_INSTRUCTIONS,
+}
+
+# split_id -> (task_suite_name, unnorm_key, condition, description)
+# unnorm_key is always "libero_spatial" for these variants because they all
+# fine-tune-evaluate the same libero_spatial_no_noops checkpoint; only the
+# scene/prompt changes.
+SPLITS = {
+    # --- Split 1: Prompt Sensitivity Probe (2-bowl baseline scene) ---
+    "spatial/default": (
+        "libero_spatial", "libero_spatial", "default",
+        "Baseline: 2 bowls, default (target-only) prompt.",
+    ),
+    "spatial/negative_contrast": (
+        "libero_spatial", "libero_spatial", "negative_contrast",
+        "2 bowls, prompt names AND negates the distractor.",
+    ),
+    "spatial/positive_contrast": (
+        "libero_spatial", "libero_spatial", "positive_contrast",
+        "2 bowls, prompt mentions the distractor location without negating it.",
+    ),
+
+    # --- Split 2: Distractor Placement Probe (3-bowl scenes, default prompt) ---
+    "spatial_3bowl/irrelevant": (
+        "libero_spatial_3bowl", "libero_spatial", "default",
+        "3rd bowl at neutral table center/front (irrelevant distractor).",
+    ),
+    "spatial_3bowl/semantic": (
+        "libero_spatial_3bowl_semantic", "libero_spatial", "default",
+        "3rd bowl at a named landmark different from the target's own landmark.",
+    ),
+    "spatial_3bowl/landmark": (
+        "libero_spatial_3bowl_hardneg", "libero_spatial", "default",
+        "3rd bowl near the target's OWN landmark but farther away (hard negative).",
+    ),
+    # "path" (3rd bowl between target and plate) is specified but not yet
+    # authored -- see benchmark_split.md Split 2, open design questions.
+
+    # --- Split 3: Scene Complexity Probe ---
+    "spatial_3bowl/drawer_open": (
+        "libero_spatial_3bowl_open", "libero_spatial", "default",
+        "3 bowls + wooden cabinet's top drawer open, default prompt.",
+    ),
+
+    # --- Split 2 x Split 1: hard-negative scene with a disambiguating prompt ---
+    "spatial_3bowl/landmark_with_hardneg_prompt": (
+        "libero_spatial_3bowl_hardneg", "libero_spatial", "hardneg",
+        "3-bowl hard-negative scene, prompt disambiguates target vs. the near hard negative.",
+    ),
+
+    # --- Split 4: Surface vs Landmark Grounding Probe, gap-fill cells ---
+    # 4 of 6 (target-family, distractor-family) cells already exist inside the
+    # libero_spatial baseline -- see GROUNDING_PROBE_CELLS below, no separate
+    # split entry needed (use `spatial/default` filtered to those task ids via
+    # --task_ids). These two cells needed a new scene (existing distractor bowl
+    # moved to a different pre-existing region; canonical libero_spatial untouched).
+    "grounding/surface_landmark": (
+        "libero_spatial_grounding_surface_landmark", "libero_spatial", "default",
+        "Surface-cue target (on the ramekin) + landmark-cue distractor (next to cookie box).",
+    ),
+    "grounding/region_surface": (
+        "libero_spatial_grounding_region_surface", "libero_spatial", "default",
+        "Region-cue target (table center) + surface-cue distractor (on the stove).",
+    ),
+}
+
+# --- Split 4 metadata: relation family of the TARGET in each libero_spatial task ---
+TARGET_RELATION_FAMILY = {
+    "pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate": "landmark",
+    "pick_up_the_black_bowl_next_to_the_ramekin_and_place_it_on_the_plate": "landmark",
+    "pick_up_the_black_bowl_from_table_center_and_place_it_on_the_plate": "region",
+    "pick_up_the_black_bowl_on_the_cookie_box_and_place_it_on_the_plate": "surface",
+    "pick_up_the_black_bowl_in_the_top_drawer_of_the_wooden_cabinet_and_place_it_on_the_plate": "containment",
+    "pick_up_the_black_bowl_on_the_ramekin_and_place_it_on_the_plate": "surface",
+    "pick_up_the_black_bowl_next_to_the_cookie_box_and_place_it_on_the_plate": "landmark",
+    "pick_up_the_black_bowl_on_the_stove_and_place_it_on_the_plate": "surface",
+    "pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate": "landmark",
+    "pick_up_the_black_bowl_on_the_wooden_cabinet_and_place_it_on_the_plate": "surface",
+}
+
+# --- Split 4 metadata: relation family of the existing 2nd-bowl DISTRACTOR in
+# each libero_spatial task (used to find which (target,distractor) family
+# pairs already exist in the baseline scene, no new BDDL needed) ---
+DISTRACTOR_RELATION_FAMILY = {
+    "pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate": "landmark",  # next_to_ramekin_region
+    "pick_up_the_black_bowl_next_to_the_ramekin_and_place_it_on_the_plate": "landmark",  # next_to_box_region
+    "pick_up_the_black_bowl_from_table_center_and_place_it_on_the_plate": "landmark",  # next_to_plate_region
+    "pick_up_the_black_bowl_on_the_cookie_box_and_place_it_on_the_plate": "surface",  # wooden_cabinet top
+    "pick_up_the_black_bowl_in_the_top_drawer_of_the_wooden_cabinet_and_place_it_on_the_plate": "surface",  # wooden_cabinet top
+    "pick_up_the_black_bowl_on_the_ramekin_and_place_it_on_the_plate": "surface",  # cookies_1
+    "pick_up_the_black_bowl_next_to_the_cookie_box_and_place_it_on_the_plate": "surface",  # stove cook_region
+    "pick_up_the_black_bowl_on_the_stove_and_place_it_on_the_plate": "surface",  # wooden_cabinet top
+    "pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate": "landmark",  # next_to_ramekin_region
+    "pick_up_the_black_bowl_on_the_wooden_cabinet_and_place_it_on_the_plate": "surface",  # stove cook_region
+}
+
+# (target_family, distractor_family) -> list of (task_suite_name, task_name).
+# Built from the tables above plus the two gap-fill suites. "containment"
+# target rows are excluded -- Split 4's matrix only covers landmark/surface/region.
+GROUNDING_PROBE_CELLS = {}
+for _task, _tfam in TARGET_RELATION_FAMILY.items():
+    if _tfam == "containment":
+        continue
+    _dfam = DISTRACTOR_RELATION_FAMILY[_task]
+    GROUNDING_PROBE_CELLS.setdefault((_tfam, _dfam), []).append(("libero_spatial", _task))
+GROUNDING_PROBE_CELLS[("surface", "landmark")] = [
+    ("libero_spatial_grounding_surface_landmark", "pick_up_the_black_bowl_on_the_ramekin_and_place_it_on_the_plate")
+]
+GROUNDING_PROBE_CELLS[("region", "surface")] = [
+    ("libero_spatial_grounding_region_surface", "pick_up_the_black_bowl_from_table_center_and_place_it_on_the_plate")
+]
+del _task, _tfam, _dfam
+
+
+def resolve_split(split_id):
+    """Look up (task_suite_name, unnorm_key, condition) for a split id."""
+    if split_id not in SPLITS:
+        raise KeyError(f"Unknown split '{split_id}'. Available: {sorted(SPLITS)}")
+    suite, unnorm_key, condition, _desc = SPLITS[split_id]
+    return suite, unnorm_key, condition
