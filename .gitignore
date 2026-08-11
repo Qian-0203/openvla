@@ -152,7 +152,3 @@ data/
 rollouts/
 wandb/
 experiments/logs
-
-# Large training artifacts -- not read at eval time, never belong in git history
-checkpoint/
-libero_spatial/

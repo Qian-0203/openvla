@@ -47,16 +47,8 @@ SPLITS = {
 
     # --- Split 2: Distractor Placement Probe (3-bowl scenes, default prompt) ---
     "spatial_3bowl/irrelevant": (
-        "libero_spatial_3bowl_neutral", "libero_spatial", "default",
-        "3rd bowl at a per-task region chosen to be off the target-to-plate reach path and "
-        "distance-matched to semantic/landmark, rather than one shared coordinate.",
-    ),
-    "spatial_3bowl/center_fixed_legacy": (
         "libero_spatial_3bowl", "libero_spatial", "default",
-        "Retired definition of 'irrelevant': 3rd bowl always at table_center/table_front "
-        "regardless of task. Kept only so eval_results.md's existing 80.2% number (Exp 2) "
-        "stays attributable -- do not treat as the current 'irrelevant' condition, see "
-        "benchmark_split.md Split 2's confound note.",
+        "3rd bowl at neutral table center/front (irrelevant distractor).",
     ),
     "spatial_3bowl/semantic": (
         "libero_spatial_3bowl_semantic", "libero_spatial", "default",
