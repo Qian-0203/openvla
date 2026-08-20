@@ -16,6 +16,8 @@ from experiments.robot.libero.instructions import (
     LIBERO_SPATIAL_EXPLICIT_INSTRUCTIONS,
     LIBERO_SPATIAL_HARDNEG_INSTRUCTIONS,
     LIBERO_SPATIAL_POSITIVE_CONTRAST_INSTRUCTIONS,
+    LIBERO_SPATIAL_TARGET_CUE_LANDMARK_INSTRUCTIONS,
+    LIBERO_SPATIAL_TARGET_CUE_REGION_INSTRUCTIONS,
 )
 
 # condition -> instruction dict (None = use LIBERO's own default task language)
@@ -24,6 +26,8 @@ CONDITIONS = {
     "negative_contrast": LIBERO_SPATIAL_EXPLICIT_INSTRUCTIONS,
     "positive_contrast": LIBERO_SPATIAL_POSITIVE_CONTRAST_INSTRUCTIONS,
     "hardneg": LIBERO_SPATIAL_HARDNEG_INSTRUCTIONS,
+    "target_cue_region": LIBERO_SPATIAL_TARGET_CUE_REGION_INSTRUCTIONS,
+    "target_cue_landmark": LIBERO_SPATIAL_TARGET_CUE_LANDMARK_INSTRUCTIONS,
 }
 
 # split_id -> (task_suite_name, unnorm_key, condition, description)
@@ -94,6 +98,26 @@ SPLITS = {
     "grounding/region_surface": (
         "libero_spatial_grounding_region_surface", "libero_spatial", "default",
         "Region-cue target (table center) + surface-cue distractor (on the stove).",
+    ),
+
+    # --- Split 4b: Target Cue-Type Probe (same libero_spatial scene as spatial/default;
+    # only the TARGET's phrasing changes, distractor never mentioned -- see
+    # benchmark_split.md Split 4's 4b section). Each condition's instruction dict
+    # only covers the task ids listed below -- run_libero_eval.py asserts
+    # task.name in instruction_map, so these MUST be run with --task_ids
+    # restricted to that subset, never the full 10-task suite. ---
+    "grounding/target_cue_region": (
+        "libero_spatial", "libero_spatial", "target_cue_region",
+        "Target rephrased as a table-zone/region description instead of its native "
+        "landmark or surface cue. Run with --task_ids 0 1 3 5 6 7 8 9 (task 2 is "
+        "already native region, task 4 is containment -- both excluded).",
+    ),
+    "grounding/target_cue_landmark": (
+        "libero_spatial", "libero_spatial", "target_cue_landmark",
+        "Surface-family target rephrased as a landmark ('next to X') cue instead of "
+        "its native surface ('on X') cue -- disclosed-approximate, see "
+        "benchmark_split.md's truthfulness-tier table. Run with --task_ids 3 5 7 9 "
+        "(the only tasks where this rephrasing is defined).",
     ),
 }
 

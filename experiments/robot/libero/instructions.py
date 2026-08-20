@@ -79,6 +79,64 @@ LIBERO_SPATIAL_POSITIVE_CONTRAST_INSTRUCTIONS = {
 
 
 # ---------------------------------------------------------------------------
+# Split 4b "Target Cue-Type Probe": rephrases ONLY the target description using
+# an alternate relation-family cue (landmark "next to X" / surface "on X" /
+# region "table-zone" wording), distractor never mentioned, scene/init states
+# identical to `libero_spatial` (`spatial/default`). Isolates cue TYPE from
+# both scene content (Split 4a's axis) and distractor mention (Split 1's axis
+# -- see `benchmark_split.md` Split 4's 4b section for why that axis is
+# dropped here). Only covers tasks where the alternate phrasing is a truthful
+# or disclosed-approximate description of that task's actual bowl placement;
+# tasks not covered are intentionally absent, not defaulted -- run this
+# condition with `--task_ids` restricted to this dict's keys (see
+# eval_registry.SPLITS descriptions for `grounding/target_cue_region` and
+# `grounding/target_cue_landmark`), since run_libero_eval.py asserts
+# `task.name in instruction_map` and does not silently skip missing tasks.
+# ---------------------------------------------------------------------------
+
+# Landmark-family tasks (0, 1, 6, 8) already use this cue type natively via
+# `spatial/default` and are intentionally omitted -- rephrasing them here
+# would just duplicate that baseline. Task 2 (region, table_center) has no
+# nameable landmark object nearby and task 4 (containment) is out of scope
+# for Split 4's matrix (see benchmark_split.md).
+LIBERO_SPATIAL_TARGET_CUE_REGION_INSTRUCTIONS = {
+    "pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl at the back of the table, just left of center, and place it on the plate",
+    "pick_up_the_black_bowl_next_to_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl at the far back-left of the table and place it on the plate",
+    "pick_up_the_black_bowl_on_the_cookie_box_and_place_it_on_the_plate":
+        "pick up the black bowl near the center of the table and place it on the plate",
+    "pick_up_the_black_bowl_on_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl at the back-left of the table and place it on the plate",
+    "pick_up_the_black_bowl_next_to_the_cookie_box_and_place_it_on_the_plate":
+        "pick up the black bowl at the front-right of the table and place it on the plate",
+    "pick_up_the_black_bowl_on_the_stove_and_place_it_on_the_plate":
+        "pick up the black bowl at the front-left of the table and place it on the plate",
+    "pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate":
+        "pick up the black bowl at the far back of the table and place it on the plate",
+    "pick_up_the_black_bowl_on_the_wooden_cabinet_and_place_it_on_the_plate":
+        "pick up the black bowl at the front of the table, just right of center, and place it on the plate",
+}
+
+
+# Surface-family tasks only (3, 5, 7, 9): the bowl rests ON the named object,
+# so "next to X" is a disclosed-approximate (co-located, not exact) reading --
+# see benchmark_split.md Split 4's truthfulness-tier table. Landmark-family
+# tasks already use this cue natively (omitted, see above); region-family
+# task 2 has no nameable object near `table_center` to reference.
+LIBERO_SPATIAL_TARGET_CUE_LANDMARK_INSTRUCTIONS = {
+    "pick_up_the_black_bowl_on_the_cookie_box_and_place_it_on_the_plate":
+        "pick up the black bowl next to the cookie box and place it on the plate",
+    "pick_up_the_black_bowl_on_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl next to the ramekin and place it on the plate",
+    "pick_up_the_black_bowl_on_the_stove_and_place_it_on_the_plate":
+        "pick up the black bowl next to the stove and place it on the plate",
+    "pick_up_the_black_bowl_on_the_wooden_cabinet_and_place_it_on_the_plate":
+        "pick up the black bowl next to the wooden cabinet and place it on the plate",
+}
+
+
+# ---------------------------------------------------------------------------
 # Hard-negative distractor instructions (for the `libero_spatial_3bowl_hardneg`
 # suite). There the third bowl (`akita_black_bowl_3`) sits near the SAME landmark
 # as the target but farther from it, so the plain instruction is genuinely
