@@ -51,9 +51,23 @@ SPLITS = {
 
     # --- Split 2: Distractor Placement Probe (3-bowl scenes, default prompt) ---
     "spatial_3bowl/irrelevant": (
+        "libero_spatial_3bowl_front", "libero_spatial", "default",
+        "3rd bowl always at main_table_table_front (literal front edge of the table, far from "
+        "every object in every task), except 4 tasks (next_to_the_ramekin, on_the_cookie_box, "
+        "on_the_ramekin, next_to_the_cookie_box) that fall back to table_center because their "
+        "own bowls sit within ~0.10-0.13m of table_front. 2026-08-27 fine-tune: table_front "
+        "+0.05m further front, table_center fallback +0.05m further back (still ~0.29m clear "
+        "of stove_region). Second redefinition -- see irrelevant_v1_legacy and "
+        "center_fixed_legacy below for the prior two.",
+    ),
+    "spatial_3bowl/irrelevant_v1_legacy": (
         "libero_spatial_3bowl_neutral", "libero_spatial", "default",
-        "3rd bowl at a per-task region chosen to be off the target-to-plate reach path and "
-        "distance-matched to semantic/landmark, rather than one shared coordinate.",
+        "First redefinition of 'irrelevant': 3rd bowl at a per-task region chosen to be off "
+        "the target-to-plate reach path and distance-matched to semantic/landmark, rather "
+        "than one shared coordinate -- but reused next_to_ramekin_region (itself another "
+        "task's real target landmark) for 5/10 tasks. Kept only so benchmark_split_result.md's "
+        "existing 88.8% number stays attributable -- do not treat as the current 'irrelevant' "
+        "condition, see benchmark_split_plan.md Split 2's redefinition note.",
     ),
     "spatial_3bowl/center_fixed_legacy": (
         "libero_spatial_3bowl", "libero_spatial", "default",
@@ -63,8 +77,18 @@ SPLITS = {
         "benchmark_split.md Split 2's confound note.",
     ),
     "spatial_3bowl/semantic": (
+        "libero_spatial_3bowl_semantic2", "libero_spatial", "default",
+        "3rd bowl at a named landmark different from the target's own landmark. Second "
+        "redefinition -- only task 4 (in the top drawer) changed vs. semantic_v1_legacy, "
+        "moved from next_to_plate_region (~0.58m from the target, outside the semantic band "
+        "and effectively behaving like 'irrelevant') to between_plate_ramekin_region (~0.48m).",
+    ),
+    "spatial_3bowl/semantic_v1_legacy": (
         "libero_spatial_3bowl_semantic", "libero_spatial", "default",
-        "3rd bowl at a named landmark different from the target's own landmark.",
+        "First definition of 'semantic': identical to the current one except task 4's bowl_3 "
+        "sat at next_to_plate_region (~0.58m from the target, outside the 0.33-0.50m band the "
+        "other 9 tasks land in). Kept only so benchmark_split_result.md's existing 84.8% "
+        "number stays attributable -- do not treat as the current 'semantic' condition.",
     ),
     "spatial_3bowl/landmark": (
         "libero_spatial_3bowl_hardneg", "libero_spatial", "default",
