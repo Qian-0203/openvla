@@ -17,6 +17,7 @@ from experiments.robot.libero.instructions import (
     LIBERO_SPATIAL_HARDNEG_INSTRUCTIONS,
     LIBERO_SPATIAL_POSITIVE_CONTRAST_INSTRUCTIONS,
     LIBERO_SPATIAL_TARGET_CUE_LANDMARK_INSTRUCTIONS,
+    LIBERO_SPATIAL_TARGET_CUE_PROXIMITY_NOVEL_INSTRUCTIONS,
     LIBERO_SPATIAL_TARGET_CUE_REGION_INSTRUCTIONS,
 )
 
@@ -28,6 +29,7 @@ CONDITIONS = {
     "hardneg": LIBERO_SPATIAL_HARDNEG_INSTRUCTIONS,
     "target_cue_region": LIBERO_SPATIAL_TARGET_CUE_REGION_INSTRUCTIONS,
     "target_cue_landmark": LIBERO_SPATIAL_TARGET_CUE_LANDMARK_INSTRUCTIONS,
+    "target_cue_proximity_novel": LIBERO_SPATIAL_TARGET_CUE_PROXIMITY_NOVEL_INSTRUCTIONS,
 }
 
 # split_id -> (task_suite_name, unnorm_key, condition, description)
@@ -142,6 +144,18 @@ SPLITS = {
         "its native surface ('on X') cue -- disclosed-approximate, see "
         "benchmark_split.md's truthfulness-tier table. Run with --task_ids 3 5 7 9 "
         "(the only tasks where this rephrasing is defined).",
+    ),
+
+    # --- Split 4c: Familiar vs. Novel Proximity-Cue Probe (same 4 surface-family
+    # tasks and scene as target_cue_landmark; isolates whether that condition's
+    # drop tracks relation-type change or exact-template familiarity -- see
+    # benchmark_split.md Split 4's 4c section). ---
+    "grounding/target_cue_proximity_novel": (
+        "libero_spatial", "libero_spatial", "target_cue_proximity_novel",
+        "Surface-family target rephrased with a proximity synonym ('close to X') "
+        "never used in any native libero_spatial prompt -- same disclosed-approximate "
+        "reading as target_cue_landmark ('next to X'), but lexically novel rather than "
+        "a familiar template borrowed from tasks 0/1/6/8. Run with --task_ids 3 5 7 9.",
     ),
 }
 

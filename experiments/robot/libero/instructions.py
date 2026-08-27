@@ -137,6 +137,36 @@ LIBERO_SPATIAL_TARGET_CUE_LANDMARK_INSTRUCTIONS = {
 
 
 # ---------------------------------------------------------------------------
+# Split 4c "Familiar vs. Novel Proximity-Cue Probe": same 4 surface-family
+# tasks as LIBERO_SPATIAL_TARGET_CUE_LANDMARK_INSTRUCTIONS above, same
+# disclosed-approximate "co-located with X" reading, but swaps "next to X"
+# (the native landmark-family phrasing used verbatim in tasks 0/1/6/8) for
+# "close to X" -- a proximity synonym that never appears in ANY of the 10
+# native `libero_spatial` prompts. Isolates whether TARGET_CUE_LANDMARK's
+# ~50pt drop (see benchmark_split_result.md Split 4's 4b write-up) comes from
+# the relation-type change (surface -> proximity) or from matching a specific
+# memorized sentence template, independent of relation type: if this condition
+# drops about as much as TARGET_CUE_LANDMARK, the damage tracks relation type;
+# if it drops substantially more, exact template familiarity is doing most of
+# the work. Distractor never mentioned, scene/init states identical to
+# `libero_spatial`. Run with `--task_ids 3 5 7 9` only (same constraint as
+# TARGET_CUE_LANDMARK -- run_libero_eval.py asserts `task.name in
+# instruction_map` and does not skip missing tasks).
+# ---------------------------------------------------------------------------
+
+LIBERO_SPATIAL_TARGET_CUE_PROXIMITY_NOVEL_INSTRUCTIONS = {
+    "pick_up_the_black_bowl_on_the_cookie_box_and_place_it_on_the_plate":
+        "pick up the black bowl close to the cookie box and place it on the plate",
+    "pick_up_the_black_bowl_on_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl close to the ramekin and place it on the plate",
+    "pick_up_the_black_bowl_on_the_stove_and_place_it_on_the_plate":
+        "pick up the black bowl close to the stove and place it on the plate",
+    "pick_up_the_black_bowl_on_the_wooden_cabinet_and_place_it_on_the_plate":
+        "pick up the black bowl close to the wooden cabinet and place it on the plate",
+}
+
+
+# ---------------------------------------------------------------------------
 # Hard-negative distractor instructions (for the `libero_spatial_3bowl_hardneg`
 # suite). There the third bowl (`akita_black_bowl_3`) sits near the SAME landmark
 # as the target but farther from it, so the plain instruction is genuinely
