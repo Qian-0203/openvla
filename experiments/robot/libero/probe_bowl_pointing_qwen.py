@@ -14,6 +14,16 @@ Uses the same rendered/annotated images and ground truth as probe_bowl_pointing.
 bowl_pointing_common.py) so results are directly comparable in setup, just not in what they imply
 about THIS project's checkpoint.
 
+Sampling (2026-09-04). Every prior run of this script (benchmark_split_result.md Sec.8.1-8.4) drew
+exactly one greedy (`do_sample=False`) generation per query, so a condition's reported accuracy was
+a single point estimate over already-small n (10 or 40 pooled) -- no sense of how much of that
+number is model signal vs. one unlucky/lucky decode. This version draws `num_samples` sampled
+generations per query (`do_sample=True`, `temperature=cfg.temperature`, via `num_return_sequences`
+in one `generate()` call) and reports, per query, the fraction of samples that land on the correct
+bowl (`sample_accuracy`) and the majority-vote answer -- the former is the trend metric this change
+was for; the latter is the closest analog to the old greedy-only numbers, for continuity. Set
+`--num_samples 1 --temperature 0` to reproduce the exact old greedy behavior.
+
 Dependency note: unlike probe_bowl_pointing.py, this needs `transformers>=4.49` and `qwen-vl-utils`
 for Qwen2-VL support -- newer than the eval image's pinned `transformers==4.40.1`. Install ephemerally
 inside a container rather than rebuilding the shared eval image:
@@ -24,12 +34,14 @@ transformers-version-sensitive OpenVLA code, so this upgrade is safe to do in th
 Usage:
     python experiments/robot/libero/probe_bowl_pointing_qwen.py \
         --conditions negative_contrast,positive_contrast,hardneg \
-        --task_ids 0,1   # smoke test a couple of tasks before running the full 10
+        --task_ids 0,1 \                # smoke test a couple of tasks before running the full 10
+        --num_samples 10 --temperature 0.7   # sampled trend, not just one greedy decode (default)
 """
 
 import json
 import os
 import sys
+from collections import Counter
 from dataclasses import dataclass
 from typing import Optional
 
@@ -63,11 +75,20 @@ class QwenProbeConfig:
     max_new_tokens: int = 128  # Qwen isn't action-token constrained, allow room for a short answer
     seed: int = 7
 
+    num_samples: int = 10      # sampled generations per query (trend, not one greedy decode)
+    temperature: float = 0.7   # set 0 (with num_samples=1) to reproduce the old greedy behavior
+
     local_log_dir: str = "./experiments/logs/probe_bowl_pointing_qwen"
     fig_dir: str = "./experiments/figures/probe_bowl_pointing"  # shared with probe_bowl_pointing.py
 
 
-def query_qwen(model, processor, annotated_image, instruction, max_new_tokens):
+def query_qwen(model, processor, annotated_image, instruction, max_new_tokens, num_samples, temperature):
+    """Returns a list of `num_samples` decoded answers for the same (image, question) pair.
+
+    `temperature <= 0` falls back to a single greedy (`do_sample=False`) generation, matching this
+    script's original behavior, regardless of `num_samples` (greedy has no sample-to-sample
+    variation, so requesting more than one would just duplicate it).
+    """
     question = (
         f"The black bowls in this image are marked with numbers. Which numbered bowl should you "
         f"{instruction} Answer with just the number, then briefly explain why."
@@ -85,10 +106,16 @@ def query_qwen(model, processor, annotated_image, instruction, max_new_tokens):
         text=[text], images=image_inputs, videos=video_inputs, padding=True, return_tensors="pt"
     ).to(model.device)
 
+    do_sample = temperature > 0
+    gen_kwargs = dict(max_new_tokens=max_new_tokens, do_sample=do_sample)
+    if do_sample:
+        gen_kwargs.update(temperature=temperature, num_return_sequences=num_samples)
+
     with torch.no_grad():
-        generated_ids = model.generate(**inputs, max_new_tokens=max_new_tokens, do_sample=False)
-    trimmed = [out[len(inp):] for inp, out in zip(inputs.input_ids, generated_ids)]
-    return processor.batch_decode(trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+        generated_ids = model.generate(**inputs, **gen_kwargs)
+    trimmed = [out[len(inputs.input_ids[0]):] for out in generated_ids]
+    decoded = processor.batch_decode(trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)
+    return decoded if do_sample else decoded[:1]
 
 
 @draccus.wrap()
@@ -133,9 +160,17 @@ def probe(cfg: QwenProbeConfig) -> None:
                 assert task.name in instruction_dict, f"No '{condition}' instruction for task '{task.name}'"
                 instruction = instruction_dict[task.name]
 
-            raw_text = query_qwen(model, processor, annotated, instruction, cfg.max_new_tokens)
-            parsed = parse_answer(raw_text, set(bowl_to_number.values()))
-            correct = parsed == target_number
+            raw_texts = query_qwen(
+                model, processor, annotated, instruction, cfg.max_new_tokens, cfg.num_samples, cfg.temperature
+            )
+            valid_numbers = set(bowl_to_number.values())
+            parsed_answers = [parse_answer(t, valid_numbers) for t in raw_texts]
+            n_correct = sum(p == target_number for p in parsed_answers)
+            sample_accuracy = n_correct / len(parsed_answers)
+
+            answer_counts = Counter(parsed_answers)
+            majority_answer, majority_count = answer_counts.most_common(1)[0]
+            majority_correct = majority_answer == target_number
 
             fig_path = os.path.join(cfg.fig_dir, f"{suite_name}--{condition}--t{task_id}.png")
             annotated.save(fig_path)
@@ -149,15 +184,21 @@ def probe(cfg: QwenProbeConfig) -> None:
                 "instruction": instruction,
                 "bowl_to_number": bowl_to_number,
                 "target_number": target_number,
-                "raw_model_output": raw_text,
-                "parsed_answer": parsed,
-                "correct": correct,
+                "num_samples": len(raw_texts),
+                "temperature": cfg.temperature,
+                "raw_model_outputs": raw_texts,
+                "parsed_answers": parsed_answers,
+                "sample_accuracy": sample_accuracy,
+                "answer_counts": {str(k): v for k, v in answer_counts.items()},
+                "majority_answer": majority_answer,
+                "majority_correct": majority_correct,
                 "annotated_image": fig_path,
             }
             results.append(record)
             print(
-                f"[{condition} t{task_id}] target={target_number} parsed={parsed} "
-                f"correct={correct} raw={raw_text!r}"
+                f"[{condition} t{task_id}] target={target_number} sample_acc={sample_accuracy:.2f} "
+                f"({n_correct}/{len(parsed_answers)}) majority={majority_answer} "
+                f"majority_correct={majority_correct} answers={dict(answer_counts)}"
             )
 
     results_path = os.path.join(cfg.local_log_dir, "probe_bowl_pointing_qwen.jsonl")
@@ -169,8 +210,15 @@ def probe(cfg: QwenProbeConfig) -> None:
     print(f"Annotated images: {cfg.fig_dir}")
     for condition in conditions:
         rows = [r for r in results if r["condition"] == condition]
-        acc = sum(r["correct"] for r in rows) / len(rows) if rows else float("nan")
-        print(f"{condition}: {sum(r['correct'] for r in rows)}/{len(rows)} correct ({acc*100:.1f}%)")
+        if not rows:
+            continue
+        mean_sample_acc = sum(r["sample_accuracy"] for r in rows) / len(rows)
+        n_majority_correct = sum(r["majority_correct"] for r in rows)
+        print(
+            f"{condition}: sample_accuracy(mean over {rows[0]['num_samples']} samples/query)="
+            f"{mean_sample_acc*100:.1f}%  |  majority-vote={n_majority_correct}/{len(rows)} "
+            f"({n_majority_correct/len(rows)*100:.1f}%)"
+        )
 
 
 if __name__ == "__main__":
