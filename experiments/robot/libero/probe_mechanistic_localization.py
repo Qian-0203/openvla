@@ -333,6 +333,18 @@ def probe(cfg: ProbeConfig) -> None:
             task_description = instruction_map[task.name]
         print(f"\n=== condition={condition!r}  instruction={task_description!r} ===")
 
+        # [2026-09-06] Bowl-distance instrumentation, borrowed from probe_bowl_attraction.py, so this
+        # run's own per-episode "did it approach the target/distractor/neither" label comes from the
+        # SAME rollout as the mechanistic diagnostics -- a separately-launched probe_bowl_attraction.py
+        # run was tried first and found to diverge from this script's own rollouts after a handful of
+        # steps (GPU floating-point non-determinism across process launches, same root cause as the
+        # sdpa/eager finding above), so per-episode joins across two separate runs are NOT valid; only
+        # instrumenting both signals in one rollout is.
+        base = env.env
+        bowl_names = sorted(n for n in base.obj_body_id if n.startswith("akita_black_bowl"))
+        bowl_body_ids = {n: base.obj_body_id[n] for n in bowl_names}
+        near_thresh_m = 0.08
+
         # num_vision_patches is prompt/image-shape invariant for this checkpoint -- compute once.
         env.reset()
         obs0 = env.set_init_state(init_states[0])
@@ -358,6 +370,8 @@ def probe(cfg: ProbeConfig) -> None:
             done = False
             episode_records = []  # buffered so the final `success` label can be attached to every
                                    # step's record once known -- it isn't known until the episode ends
+            min_dist = {n: float("inf") for n in bowl_names}
+            first_near_step = {n: None for n in bowl_names}
             while t < max_steps + cfg.num_steps_wait:
                 if t < cfg.num_steps_wait:
                     obs, reward, done, info = env.step(get_libero_dummy_action(cfg.model_family))
@@ -371,6 +385,18 @@ def probe(cfg: ProbeConfig) -> None:
                         (obs["robot0_eef_pos"], quat2axisangle(obs["robot0_eef_quat"]), obs["robot0_gripper_qpos"])
                     ),
                 }
+
+                # Same distance bookkeeping as probe_bowl_attraction.py, computed in THIS rollout.
+                eef_pos = np.array(obs["robot0_eef_pos"])
+                dist_by_bowl = {}
+                for n, bid in bowl_body_ids.items():
+                    bowl_pos = np.array(base.sim.data.body_xpos[bid])
+                    d = float(np.linalg.norm(eef_pos - bowl_pos))
+                    dist_by_bowl[n] = d
+                    if d < min_dist[n]:
+                        min_dist[n] = d
+                    if d < near_thresh_m and first_near_step[n] is None:
+                        first_near_step[n] = t
                 if cfg.save_raw_tensors:
                     cfg_save_raw_tensors_holder["path_fn"] = (
                         lambda step, d=raw_dir, envstep=t: os.path.join(d, f"envstep{envstep}--tok{step}.pt")
@@ -387,6 +413,7 @@ def probe(cfg: ProbeConfig) -> None:
                     "condition": condition,
                     "episode_idx": episode_idx,
                     "env_step": t,
+                    "dist_by_bowl": dist_by_bowl,
                     "per_token_diag": per_token_diag,
                 }
                 episode_records.append(rec)
@@ -397,13 +424,26 @@ def probe(cfg: ProbeConfig) -> None:
                 if done or instrumented_steps >= max_steps:
                     break
 
+            # Same "first bowl actually reached for" derivation as probe_bowl_attraction.py.
+            reached = [(step, n) for n, step in first_near_step.items() if step is not None]
+            reached.sort()
+            first_bowl = reached[0][1] if reached else None
+            first_bowl_is_target = (first_bowl == "akita_black_bowl_1") if first_bowl else None
+
             for rec in episode_records:
                 rec["success"] = bool(done)
                 rec["instrumented_steps"] = instrumented_steps
+                rec["min_dist_by_bowl"] = min_dist
+                rec["first_near_step_by_bowl"] = first_near_step
+                rec["first_bowl_approached"] = first_bowl
+                rec["first_bowl_is_target"] = first_bowl_is_target
                 out_file.write(json.dumps(rec) + "\n")
             out_file.flush()
 
-            print(f"  ep {episode_idx}: success={bool(done)} instrumented_steps={instrumented_steps}")
+            print(
+                f"  ep {episode_idx}: success={bool(done)} instrumented_steps={instrumented_steps} "
+                f"first_bowl={first_bowl}"
+            )
 
         env.close()
 
