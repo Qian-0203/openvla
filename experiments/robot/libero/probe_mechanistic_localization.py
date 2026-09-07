@@ -1,5 +1,9 @@
 """
-probe_mechanistic_localization.py  (DRAFT / uncommitted -- sketch for review, not yet run)
+probe_mechanistic_localization.py
+
+Validated: success rates reproduce the real eval (task 5: 93.3%/0% here vs. 92-94%/2-4% real, see
+benchmark_split_result.md Sec.8.10) after the center-crop and teacher-forced-diagnostics fixes below.
+Run four times (Sec.8.9-8.11); see get_action_with_diagnostics's own docstring for the sdpa/eager fix.
 
 Diagnostic probe for benchmark_split_result.md Sec.8.6 gap #3 ("no mechanistic localization").
 Sec.8.5's probe_bowl_attraction.py shows *what the arm does* (never commits to a target, or
@@ -23,10 +27,10 @@ use `vla.predict_action()` here: it assumes `self.generate(...)` returns a raw t
 being true once `return_dict_in_generate=True` is passed through its **kwargs. So this script calls
 `vla.generate()` directly and replicates predict_action's bin-decoding tail itself.
 
-Caveats (first pass, deliberately not resolved yet):
-  - Logit lens applies `language_model.model.norm` before `lm_head` (standard Llama pre-head norm).
-    Verify this attribute path holds for this checkpoint's `language_model` class before trusting
-    the resolution-layer numbers.
+Caveats (remaining, as of the Sec.8.11 dist_full run):
+  - [RESOLVED] Logit lens applies `language_model.model.norm` before `lm_head` (standard Llama
+    pre-head norm). Attribute path confirmed correct for this checkpoint's `language_model` class --
+    resolution-layer numbers have been consistent (0-32 range, gripper resolving early) across four runs.
   - [RESOLVED 2026-09-06] center_crop preprocessing was previously accepted as a cfg flag but never
     applied here (see benchmark_split_result.md Sec.8.9) -- the 2026-09-04 run's 0% success in both
     conditions (vs. the real eval's 92-94%/2-4% for this task) is attributed to this gap. Now applied
