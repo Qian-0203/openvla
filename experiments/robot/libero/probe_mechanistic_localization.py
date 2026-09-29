@@ -19,8 +19,19 @@ adds two cheap, no-extra-training diagnostics at every action-chunk prediction:
      the vision-patch span vs. the text-instruction span vs. previously-generated action tokens.
      Diffuse/low vision-attention during a failure would support "not looking at the right bowl";
      high vision-attention with a still-wrong action would push the explanation downstream instead.
+  3. [Added 2026-09-09, per Sec.8.14's "natural next step"] Final-layer decision confidence:
+     `final_layer_margin` (top1-top2 logit gap) and `final_layer_entropy` (full-vocab softmax
+     entropy) at the same row used for the logit-lens/attention diagnostics above. Neither (1) nor
+     (2) can tell "confidently executing the wrong motion" apart from "confidently executing the
+     right one" -- resolution layer and vision-attention share are both blind to whether the
+     eventually-chosen token was a good idea. Crossed against this rollout's own `dist_by_bowl`
+     trajectory (already recorded per step, no rerun needed to add that half), per-step
+     high-margin/low-entropy steps that move the arm toward the *wrong* bowl vs. the target bowl are
+     directly what Sec.8.14's "confident misexecution" reading needs and previously lacked. Cheap:
+     the topk(2)/softmax/entropy ops above are O(1) additions per already-computed final-layer
+     logits tensor, no extra forward pass.
 
-Both come for free from a standard HF `.generate(..., output_attentions=True,
+Both of (1)/(2) come for free from a standard HF `.generate(..., output_attentions=True,
 output_hidden_states=True, return_dict_in_generate=True)` call -- OpenVLAForActionPrediction only
 overrides `prepare_inputs_for_generation`, not `generate` itself (modeling_prismatic.py). We can't
 use `vla.predict_action()` here: it assumes `self.generate(...)` returns a raw tensor, which stops
@@ -242,6 +253,10 @@ def get_action_with_diagnostics(
 
         resolution_layer = None
         final_layer_top1 = None
+        final_layer_margin = None    # top1 - top2 logit at the final layer: how decisively the
+                                      # model committed to its chosen token, independent of whether
+                                      # that token was "correct" (see finding re: §8.14's next step)
+        final_layer_entropy = None   # softmax entropy (nats) over the full vocab at the final layer
         layer_top1_ids = []
         for layer_idx, h in enumerate(layer_hidden_states):
             h_row = h[:, row, :]
@@ -252,6 +267,10 @@ def get_action_with_diagnostics(
             layer_top1_ids.append(top1_id)
             if layer_idx == num_layers:
                 final_layer_top1 = top1_id
+                top2_vals, _ = torch.topk(logits, 2, dim=-1)
+                final_layer_margin = float((top2_vals[0, 0] - top2_vals[0, 1]).item())
+                probs = torch.softmax(logits.float(), dim=-1)
+                final_layer_entropy = float(-(probs * torch.log(probs.clamp_min(1e-12))).sum().item())
         for layer_idx, top1_id in enumerate(layer_top1_ids):
             if top1_id == final_layer_top1 and resolution_layer is None:
                 resolution_layer = layer_idx
@@ -274,6 +293,8 @@ def get_action_with_diagnostics(
             "diag_argmax_matches_executed": final_layer_top1 == chosen_id,  # sdpa-vs-eager divergence
             "resolution_layer": resolution_layer,     # None => never matched final layer (shouldn't happen)
             "resolution_layer_frac": (resolution_layer / num_layers) if resolution_layer is not None else None,
+            "final_layer_margin": final_layer_margin,
+            "final_layer_entropy": final_layer_entropy,
             "vision_attn_by_layer": vision_attn_by_layer,
             "vision_attn_last_layer": vision_attn_by_layer[-1],
             "vision_attn_mean_layer": float(np.mean(vision_attn_by_layer)),
