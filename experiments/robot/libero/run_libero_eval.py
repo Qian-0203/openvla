@@ -2,7 +2,7 @@
 run_libero_eval.py
 
 Runs a model in a LIBERO simulation environment. Single canonical entry point
-for every benchmark split in vla_ws/benchmark_split.md -- pick a split with
+for every benchmark split in vla_ws/docs/benchmark_split_plan.md -- pick a split with
 `--split` (see experiments/robot/libero/eval_registry.py for the full list)
 or fall back to manually setting `--task_suite_name`/`--unnorm_key`/`--condition`.
 

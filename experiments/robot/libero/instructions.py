@@ -11,7 +11,7 @@ without any template changes.
 Each scene contains TWO identical black bowls: the target (`akita_black_bowl_1`)
 and a distractor (`akita_black_bowl_2`). The default LIBERO instructions only
 describe the target ("pick up the black bowl <where> ..."). The sets below are
-`benchmark_split.md` Split 1's three prompt conditions ("Prompt Sensitivity
+`benchmark_split_plan.md` Split 1's three prompt conditions ("Prompt Sensitivity
 Probe") over that same 2-bowl scene, plus the hard-negative condition used by
 `libero_spatial_3bowl_hardneg`. See eval_registry.py for how a `--condition`
 CLI flag selects one of these at eval time.
@@ -51,7 +51,7 @@ LIBERO_SPATIAL_EXPLICIT_INSTRUCTIONS = {
 # it (no "not the one ..." clause) -- tests whether merely mentioning a second
 # bowl hurts, independent of the negation/contrast itself. Same distractor
 # locations as LIBERO_SPATIAL_EXPLICIT_INSTRUCTIONS above, just phrased as a
-# plain mention. See benchmark_split.md Split 1 for the derived metrics
+# plain mention. See benchmark_split_plan.md Split 1 for the derived metrics
 # (Distractor Mention Drop, Negation-specific Drop).
 # ---------------------------------------------------------------------------
 LIBERO_SPATIAL_POSITIVE_CONTRAST_INSTRUCTIONS = {
@@ -84,7 +84,7 @@ LIBERO_SPATIAL_POSITIVE_CONTRAST_INSTRUCTIONS = {
 # region "table-zone" wording), distractor never mentioned, scene/init states
 # identical to `libero_spatial` (`spatial/default`). Isolates cue TYPE from
 # both scene content (Split 4a's axis) and distractor mention (Split 1's axis
-# -- see `benchmark_split.md` Split 4's 4b section for why that axis is
+# -- see `benchmark_split_plan.md` Split 4's 4b section for why that axis is
 # dropped here). Only covers tasks where the alternate phrasing is a truthful
 # or disclosed-approximate description of that task's actual bowl placement;
 # tasks not covered are intentionally absent, not defaulted -- run this
@@ -98,7 +98,7 @@ LIBERO_SPATIAL_POSITIVE_CONTRAST_INSTRUCTIONS = {
 # `spatial/default` and are intentionally omitted -- rephrasing them here
 # would just duplicate that baseline. Task 2 (region, table_center) has no
 # nameable landmark object nearby and task 4 (containment) is out of scope
-# for Split 4's matrix (see benchmark_split.md).
+# for Split 4's matrix (see benchmark_split_plan.md).
 LIBERO_SPATIAL_TARGET_CUE_REGION_INSTRUCTIONS = {
     "pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate":
         "pick up the black bowl at the back of the table, just left of center, and place it on the plate",
@@ -121,7 +121,7 @@ LIBERO_SPATIAL_TARGET_CUE_REGION_INSTRUCTIONS = {
 
 # Surface-family tasks only (3, 5, 7, 9): the bowl rests ON the named object,
 # so "next to X" is a disclosed-approximate (co-located, not exact) reading --
-# see benchmark_split.md Split 4's truthfulness-tier table. Landmark-family
+# see benchmark_split_plan.md Split 4's truthfulness-tier table. Landmark-family
 # tasks already use this cue natively (omitted, see above); region-family
 # task 2 has no nameable object near `table_center` to reference.
 LIBERO_SPATIAL_TARGET_CUE_LANDMARK_INSTRUCTIONS = {

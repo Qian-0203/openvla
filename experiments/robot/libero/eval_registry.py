@@ -2,13 +2,13 @@
 eval_registry.py
 
 Single canonical registry mapping a benchmark "split" (as specified in
-vla_ws/benchmark_split.md) to the concrete (task_suite_name, unnorm_key,
+vla_ws/docs/benchmark_split_plan.md) to the concrete (task_suite_name, unnorm_key,
 condition) triple `run_libero_eval.py` needs, plus the instruction dict each
 `condition` resolves to. This is the one place that knows how splits map onto
 LIBERO task suites -- docker/openvla_libero/run_eval.sh and any future caller
 should only ever pass `--split`, never hand-set suite/condition themselves.
 
-Adding a split = add one entry to SPLITS (see benchmark_split.md "How to add a
+Adding a split = add one entry to SPLITS (see vla_ws/CLAUDE.md "How to add a
 benchmark split").
 """
 
@@ -74,9 +74,9 @@ SPLITS = {
     "spatial_3bowl/center_fixed_legacy": (
         "libero_spatial_3bowl", "libero_spatial", "default",
         "Retired definition of 'irrelevant': 3rd bowl always at table_center/table_front "
-        "regardless of task. Kept only so eval_results.md's existing 80.2% number (Exp 2) "
+        "regardless of task. Kept only so benchmark_split_result.md's existing 80.2% number (Exp 2) "
         "stays attributable -- do not treat as the current 'irrelevant' condition, see "
-        "benchmark_split.md Split 2's confound note.",
+        "benchmark_split_plan.md Split 2's confound note.",
     ),
     "spatial_3bowl/semantic": (
         "libero_spatial_3bowl_semantic2", "libero_spatial", "default",
@@ -97,7 +97,7 @@ SPLITS = {
         "3rd bowl near the target's OWN landmark but farther away (hard negative).",
     ),
     # "path" (3rd bowl between target and plate) is specified but not yet
-    # authored -- see benchmark_split.md Split 2, open design questions.
+    # authored -- see benchmark_split_plan.md Split 2, open design questions.
 
     # --- Split 3: Scene Complexity Probe ---
     "spatial_3bowl/drawer_open": (
@@ -128,7 +128,7 @@ SPLITS = {
 
     # --- Split 4b: Target Cue-Type Probe (same libero_spatial scene as spatial/default;
     # only the TARGET's phrasing changes, distractor never mentioned -- see
-    # benchmark_split.md Split 4's 4b section). Each condition's instruction dict
+    # benchmark_split_plan.md Split 4's 4b section). Each condition's instruction dict
     # only covers the task ids listed below -- run_libero_eval.py asserts
     # task.name in instruction_map, so these MUST be run with --task_ids
     # restricted to that subset, never the full 10-task suite. ---
@@ -142,14 +142,14 @@ SPLITS = {
         "libero_spatial", "libero_spatial", "target_cue_landmark",
         "Surface-family target rephrased as a landmark ('next to X') cue instead of "
         "its native surface ('on X') cue -- disclosed-approximate, see "
-        "benchmark_split.md's truthfulness-tier table. Run with --task_ids 3 5 7 9 "
+        "benchmark_split_plan.md's truthfulness-tier table. Run with --task_ids 3 5 7 9 "
         "(the only tasks where this rephrasing is defined).",
     ),
 
     # --- Split 4c: Familiar vs. Novel Proximity-Cue Probe (same 4 surface-family
     # tasks and scene as target_cue_landmark; isolates whether that condition's
     # drop tracks relation-type change or exact-template familiarity -- see
-    # benchmark_split.md Split 4's 4c section). ---
+    # benchmark_split_plan.md Split 4's 4c section). ---
     "grounding/target_cue_proximity_novel": (
         "libero_spatial", "libero_spatial", "target_cue_proximity_novel",
         "Surface-family target rephrased with a proximity synonym ('close to X') "

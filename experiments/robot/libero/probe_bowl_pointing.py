@@ -4,7 +4,7 @@ probe_bowl_pointing.py
 Diagnostic VQA probe, NOT an action-rollout eval -- not wired into eval_registry.py/SPLITS.
 
 This project's distractor-mention conditions (negative_contrast, positive_contrast, hardneg) crash
-the fine-tuned checkpoint's task success rate (see vla_ws/benchmark_split_result.md Sec.6 findings
+the fine-tuned checkpoint's task success rate (see vla_ws/docs/benchmark_split_result.md Sec.6 findings
 1, 5, 9-11), but end-to-end success can't tell you WHY: is vision-language grounding actually broken
 once a second referent is mentioned, or is grounding fine and only the action-decoding head falls
 apart on this out-of-distribution phrasing?

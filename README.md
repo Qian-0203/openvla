@@ -1,3 +1,11 @@
+> **This fork is the eval-code half of the [LIBERO-Spatial Grounding Benchmark](https://github.com/Qian-0203/vla_ws).**
+> To evaluate a checkpoint, start from that repo's README. It pulls in this fork as a submodule and
+> runs everything in Docker. What this fork adds on top of upstream OpenVLA:
+> `experiments/robot/libero/eval_registry.py` (split → scene suite + prompt condition),
+> `instructions.py` (prompt text per condition), `run_libero_eval.py` (`--split`, `--task_ids`,
+> resume, multi-GPU sharding, per-rollout JSONL results), and the diagnostic `probe_*.py` scripts.
+> The upstream README follows unchanged.
+
 # OpenVLA: An Open-Source Vision-Language-Action Model
 
 [![arXiv](https://img.shields.io/badge/arXiv-2406.09246-df2a2a.svg?style=for-the-badge)](https://arxiv.org/abs/2406.09246)
