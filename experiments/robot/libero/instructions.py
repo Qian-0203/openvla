@@ -196,3 +196,219 @@ LIBERO_SPATIAL_HARDNEG_INSTRUCTIONS = {
     "pick_up_the_black_bowl_on_the_wooden_cabinet_and_place_it_on_the_plate":
         "pick up the black bowl on top of the wooden cabinet, not the one on the table in front of it, and place it on the plate",
 }
+
+
+# ---------------------------------------------------------------------------
+# Length-control probe (`benchmark_split_plan.md` Split 1's length control):
+# Split 1's contrast conditions both lengthen the prompt AND deviate from the
+# fine-tuning template, so their ~50pt drop can't yet be attributed to either
+# alone (plan §11.3 gap 2). These keep every task's native `default` wording
+# verbatim and add a content-free politeness clause -- no object, location, or
+# second referent -- at the same position the contrast clause occupies:
+#   - INFIX:  where negative_contrast's ", not the one <where>," sits.
+#   - SUFFIX: where positive_contrast's "; the other black bowl is <where>" sits.
+# A single fixed filler per condition (not per-task tuned) so the manipulation
+# is identical across tasks. Fillers were picked to match the mean extra
+# Llama-2 tokens (vs. native) of the clause they stand in for: infix +11
+# (negative_contrast: mean +11.1, range 9-13), suffix +13 (positive_contrast:
+# mean +13.1, range 11-15).
+# All 10 tasks, scene/init states identical to `libero_spatial`.
+# ---------------------------------------------------------------------------
+LIBERO_SPATIAL_LENGTH_CONTROL_INFIX_INSTRUCTIONS = {
+    "pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl between the plate and the ramekin, if it is not too much trouble for you, and place it on the plate",
+    "pick_up_the_black_bowl_from_table_center_and_place_it_on_the_plate":
+        "pick up the black bowl from table center, if it is not too much trouble for you, and place it on the plate",
+    "pick_up_the_black_bowl_in_the_top_drawer_of_the_wooden_cabinet_and_place_it_on_the_plate":
+        "pick up the black bowl in the top drawer of the wooden cabinet, if it is not too much trouble for you, and place it on the plate",
+    "pick_up_the_black_bowl_next_to_the_cookie_box_and_place_it_on_the_plate":
+        "pick up the black bowl next to the cookie box, if it is not too much trouble for you, and place it on the plate",
+    "pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate":
+        "pick up the black bowl next to the plate, if it is not too much trouble for you, and place it on the plate",
+    "pick_up_the_black_bowl_next_to_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl next to the ramekin, if it is not too much trouble for you, and place it on the plate",
+    "pick_up_the_black_bowl_on_the_cookie_box_and_place_it_on_the_plate":
+        "pick up the black bowl on the cookie box, if it is not too much trouble for you, and place it on the plate",
+    "pick_up_the_black_bowl_on_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl on the ramekin, if it is not too much trouble for you, and place it on the plate",
+    "pick_up_the_black_bowl_on_the_stove_and_place_it_on_the_plate":
+        "pick up the black bowl on the stove, if it is not too much trouble for you, and place it on the plate",
+    "pick_up_the_black_bowl_on_the_wooden_cabinet_and_place_it_on_the_plate":
+        "pick up the black bowl on the wooden cabinet, if it is not too much trouble for you, and place it on the plate",
+}
+
+LIBERO_SPATIAL_LENGTH_CONTROL_SUFFIX_INSTRUCTIONS = {
+    "pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl between the plate and the ramekin and place it on the plate; thank you so very much in advance for your help with this",
+    "pick_up_the_black_bowl_from_table_center_and_place_it_on_the_plate":
+        "pick up the black bowl from table center and place it on the plate; thank you so very much in advance for your help with this",
+    "pick_up_the_black_bowl_in_the_top_drawer_of_the_wooden_cabinet_and_place_it_on_the_plate":
+        "pick up the black bowl in the top drawer of the wooden cabinet and place it on the plate; thank you so very much in advance for your help with this",
+    "pick_up_the_black_bowl_next_to_the_cookie_box_and_place_it_on_the_plate":
+        "pick up the black bowl next to the cookie box and place it on the plate; thank you so very much in advance for your help with this",
+    "pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate":
+        "pick up the black bowl next to the plate and place it on the plate; thank you so very much in advance for your help with this",
+    "pick_up_the_black_bowl_next_to_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl next to the ramekin and place it on the plate; thank you so very much in advance for your help with this",
+    "pick_up_the_black_bowl_on_the_cookie_box_and_place_it_on_the_plate":
+        "pick up the black bowl on the cookie box and place it on the plate; thank you so very much in advance for your help with this",
+    "pick_up_the_black_bowl_on_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl on the ramekin and place it on the plate; thank you so very much in advance for your help with this",
+    "pick_up_the_black_bowl_on_the_stove_and_place_it_on_the_plate":
+        "pick up the black bowl on the stove and place it on the plate; thank you so very much in advance for your help with this",
+    "pick_up_the_black_bowl_on_the_wooden_cabinet_and_place_it_on_the_plate":
+        "pick up the black bowl on the wooden cabinet and place it on the plate; thank you so very much in advance for your help with this",
+}
+
+
+# ---------------------------------------------------------------------------
+# Split 4b same-cue paraphrase controls (the matrix's missing diagonal): the
+# target is described with its OWN native cue type, exactly truthfully, but in
+# words that differ from the fine-tuning template. 4b only measured cross-cue
+# rephrasings (surface -> landmark, * -> region); these separate "the cue type
+# changed" from "any wording change at all hurts". Distractor never mentioned,
+# scene/init states identical to `libero_spatial`, all 10 tasks.
+#   - LEXICAL:   one synonym swap or argument reorder inside the target phrase
+#                ("next to" -> "beside", "on" -> "on top of", "plate and
+#                ramekin" -> "ramekin and plate", ...). Note "on top of X" is
+#                also how negative_contrast rewords tasks 3/5/9's target, so
+#                this condition also bounds how much of that condition's drop
+#                comes from the target rewording rather than the added clause.
+#   - SYNTACTIC: native words kept, target phrase turned into a relative
+#                clause ("the black bowl that is <native where>"). Task 2's
+#                native "from table center" becomes "that is at table center",
+#                the only change beyond inserting "that is".
+# ---------------------------------------------------------------------------
+LIBERO_SPATIAL_PARAPHRASE_LEXICAL_INSTRUCTIONS = {
+    "pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl between the ramekin and the plate and place it on the plate",
+    "pick_up_the_black_bowl_from_table_center_and_place_it_on_the_plate":
+        "pick up the black bowl from the middle of the table and place it on the plate",
+    "pick_up_the_black_bowl_in_the_top_drawer_of_the_wooden_cabinet_and_place_it_on_the_plate":
+        "pick up the black bowl inside the top drawer of the wooden cabinet and place it on the plate",
+    "pick_up_the_black_bowl_next_to_the_cookie_box_and_place_it_on_the_plate":
+        "pick up the black bowl beside the cookie box and place it on the plate",
+    "pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate":
+        "pick up the black bowl beside the plate and place it on the plate",
+    "pick_up_the_black_bowl_next_to_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl beside the ramekin and place it on the plate",
+    "pick_up_the_black_bowl_on_the_cookie_box_and_place_it_on_the_plate":
+        "pick up the black bowl on top of the cookie box and place it on the plate",
+    "pick_up_the_black_bowl_on_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl on top of the ramekin and place it on the plate",
+    "pick_up_the_black_bowl_on_the_stove_and_place_it_on_the_plate":
+        "pick up the black bowl on top of the stove and place it on the plate",
+    "pick_up_the_black_bowl_on_the_wooden_cabinet_and_place_it_on_the_plate":
+        "pick up the black bowl on top of the wooden cabinet and place it on the plate",
+}
+
+LIBERO_SPATIAL_PARAPHRASE_SYNTACTIC_INSTRUCTIONS = {
+    "pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl that is between the plate and the ramekin and place it on the plate",
+    "pick_up_the_black_bowl_from_table_center_and_place_it_on_the_plate":
+        "pick up the black bowl that is at table center and place it on the plate",
+    "pick_up_the_black_bowl_in_the_top_drawer_of_the_wooden_cabinet_and_place_it_on_the_plate":
+        "pick up the black bowl that is in the top drawer of the wooden cabinet and place it on the plate",
+    "pick_up_the_black_bowl_next_to_the_cookie_box_and_place_it_on_the_plate":
+        "pick up the black bowl that is next to the cookie box and place it on the plate",
+    "pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate":
+        "pick up the black bowl that is next to the plate and place it on the plate",
+    "pick_up_the_black_bowl_next_to_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl that is next to the ramekin and place it on the plate",
+    "pick_up_the_black_bowl_on_the_cookie_box_and_place_it_on_the_plate":
+        "pick up the black bowl that is on the cookie box and place it on the plate",
+    "pick_up_the_black_bowl_on_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl that is on the ramekin and place it on the plate",
+    "pick_up_the_black_bowl_on_the_stove_and_place_it_on_the_plate":
+        "pick up the black bowl that is on the stove and place it on the plate",
+    "pick_up_the_black_bowl_on_the_wooden_cabinet_and_place_it_on_the_plate":
+        "pick up the black bowl that is on the wooden cabinet and place it on the plate",
+}
+
+
+# ---------------------------------------------------------------------------
+# Split 4b region-cue paraphrase variants: same 8 tasks and the same table-zone
+# direction as LIBERO_SPATIAL_TARGET_CUE_REGION_INSTRUCTIONS above (so they
+# inherit its truthfulness), reworded so 4b's region-cue result isn't carried
+# by one hand-written phrasing. V2 = "<zone> area/part of the table"; V3 =
+# side-first reordering ("on the left side of the table, toward the back").
+# Run with --task_ids 0 1 3 5 6 7 8 9, same as `grounding/target_cue_region`.
+# ---------------------------------------------------------------------------
+LIBERO_SPATIAL_TARGET_CUE_REGION_V2_INSTRUCTIONS = {
+    "pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl in the back part of the table, slightly left of the middle, and place it on the plate",
+    "pick_up_the_black_bowl_next_to_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl in the back-left corner area of the table and place it on the plate",
+    "pick_up_the_black_bowl_on_the_cookie_box_and_place_it_on_the_plate":
+        "pick up the black bowl around the middle of the table and place it on the plate",
+    "pick_up_the_black_bowl_on_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl in the back-left area of the table and place it on the plate",
+    "pick_up_the_black_bowl_next_to_the_cookie_box_and_place_it_on_the_plate":
+        "pick up the black bowl in the front-right area of the table and place it on the plate",
+    "pick_up_the_black_bowl_on_the_stove_and_place_it_on_the_plate":
+        "pick up the black bowl in the front-left area of the table and place it on the plate",
+    "pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate":
+        "pick up the black bowl at the very back of the table and place it on the plate",
+    "pick_up_the_black_bowl_on_the_wooden_cabinet_and_place_it_on_the_plate":
+        "pick up the black bowl in the front part of the table, slightly right of the middle, and place it on the plate",
+}
+
+LIBERO_SPATIAL_TARGET_CUE_REGION_V3_INSTRUCTIONS = {
+    "pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl toward the back of the table, a little to the left, and place it on the plate",
+    "pick_up_the_black_bowl_next_to_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl on the left side of the table, all the way at the back, and place it on the plate",
+    "pick_up_the_black_bowl_on_the_cookie_box_and_place_it_on_the_plate":
+        "pick up the black bowl roughly in the middle of the table and place it on the plate",
+    "pick_up_the_black_bowl_on_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl on the left side of the table, toward the back, and place it on the plate",
+    "pick_up_the_black_bowl_next_to_the_cookie_box_and_place_it_on_the_plate":
+        "pick up the black bowl on the right side of the table, toward the front, and place it on the plate",
+    "pick_up_the_black_bowl_on_the_stove_and_place_it_on_the_plate":
+        "pick up the black bowl on the left side of the table, toward the front, and place it on the plate",
+    "pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate":
+        "pick up the black bowl all the way at the back of the table and place it on the plate",
+    "pick_up_the_black_bowl_on_the_wooden_cabinet_and_place_it_on_the_plate":
+        "pick up the black bowl toward the front of the table, a little to the right, and place it on the plate",
+}
+
+
+# ---------------------------------------------------------------------------
+# Split 4c novel-proximity synonym variants: same 4 surface-family tasks and
+# same disclosed-approximate reading as TARGET_CUE_PROXIMITY_NOVEL ("close to
+# X"), with three more proximity words that also appear in none of the 10
+# native prompts -- so 4c's familiar-vs-novel gap rests on four novel synonyms
+# instead of one. Run with --task_ids 3 5 7 9.
+# ---------------------------------------------------------------------------
+LIBERO_SPATIAL_TARGET_CUE_PROXIMITY_BESIDE_INSTRUCTIONS = {
+    "pick_up_the_black_bowl_on_the_cookie_box_and_place_it_on_the_plate":
+        "pick up the black bowl beside the cookie box and place it on the plate",
+    "pick_up_the_black_bowl_on_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl beside the ramekin and place it on the plate",
+    "pick_up_the_black_bowl_on_the_stove_and_place_it_on_the_plate":
+        "pick up the black bowl beside the stove and place it on the plate",
+    "pick_up_the_black_bowl_on_the_wooden_cabinet_and_place_it_on_the_plate":
+        "pick up the black bowl beside the wooden cabinet and place it on the plate",
+}
+
+LIBERO_SPATIAL_TARGET_CUE_PROXIMITY_NEAR_INSTRUCTIONS = {
+    "pick_up_the_black_bowl_on_the_cookie_box_and_place_it_on_the_plate":
+        "pick up the black bowl near the cookie box and place it on the plate",
+    "pick_up_the_black_bowl_on_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl near the ramekin and place it on the plate",
+    "pick_up_the_black_bowl_on_the_stove_and_place_it_on_the_plate":
+        "pick up the black bowl near the stove and place it on the plate",
+    "pick_up_the_black_bowl_on_the_wooden_cabinet_and_place_it_on_the_plate":
+        "pick up the black bowl near the wooden cabinet and place it on the plate",
+}
+
+LIBERO_SPATIAL_TARGET_CUE_PROXIMITY_ADJACENT_INSTRUCTIONS = {
+    "pick_up_the_black_bowl_on_the_cookie_box_and_place_it_on_the_plate":
+        "pick up the black bowl adjacent to the cookie box and place it on the plate",
+    "pick_up_the_black_bowl_on_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl adjacent to the ramekin and place it on the plate",
+    "pick_up_the_black_bowl_on_the_stove_and_place_it_on_the_plate":
+        "pick up the black bowl adjacent to the stove and place it on the plate",
+    "pick_up_the_black_bowl_on_the_wooden_cabinet_and_place_it_on_the_plate":
+        "pick up the black bowl adjacent to the wooden cabinet and place it on the plate",
+}
