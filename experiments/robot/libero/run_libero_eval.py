@@ -19,6 +19,18 @@ Usage:
         --wandb_project <PROJECT> \
         --wandb_entity <ENTITY>
 
+    # openpi policies (e.g. pi05_libero), served by openpi's scripts/serve_policy.py:
+    python experiments/robot/libero/run_libero_eval.py \
+        --model_family openpi \
+        --pretrained_checkpoint gs://openpi-assets/checkpoints/pi05_libero \
+        --policy_port 8000 \
+        --split spatial/default \
+        --run_id_note pi05_libero
+
+    `--pretrained_checkpoint` is only recorded in the run metadata for openpi; the
+    server decides which weights run. Always pass a `--run_id_note` for a non-default
+    model so its results file does not collide with the reference OpenVLA runs.
+
 Resuming: pass --resume True to skip (task_id, episode_idx) pairs already
 recorded in the run's results JSONL file; pass --overwrite True to discard an
 existing results file for the same (task_suite_name, condition, run_id_note,
@@ -26,6 +38,7 @@ shard) and start over. Without either flag, re-running into an existing
 results file is an error.
 """
 
+import collections
 import json
 import os
 import platform
@@ -50,6 +63,7 @@ from experiments.robot.libero.libero_utils import (
     get_libero_dummy_action,
     get_libero_env,
     get_libero_image,
+    get_libero_images_openpi,
     quat2axisangle,
     save_rollout_video,
 )
@@ -76,6 +90,11 @@ class GenerateConfig:
     pretrained_checkpoint: Union[str, Path] = ""     # Pretrained checkpoint path
     load_in_8bit: bool = False                       # (For OpenVLA only) Load with 8-bit quantization
     load_in_4bit: bool = False                       # (For OpenVLA only) Load with 4-bit quantization
+
+    policy_host: str = "127.0.0.1"                   # (For openpi only) Policy server host
+    policy_port: int = 8000                          # (For openpi only) Policy server port
+    replan_steps: int = 5                            # (For openpi only) Actions executed per predicted chunk,
+                                                     # matching openpi's examples/libero/main.py
 
     center_crop: bool = True                         # Center crop? (if trained w/ random crop image aug)
 
@@ -225,6 +244,8 @@ def eval_libero(cfg: GenerateConfig) -> None:
         "cuda_available": torch.cuda.is_available(),
         "gpu_name": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,
     }
+    if cfg.model_family == "openpi":
+        metadata["policy_server_metadata"] = {k: str(v) for k, v in model.get_server_metadata().items()}
     with open(os.path.join(results_dir, run_key + ".meta.json"), "w") as f:
         json.dump(metadata, f, indent=2)
 
@@ -300,6 +321,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
             # Setup
             t = 0
             replay_images = []
+            action_plan = collections.deque()  # [openpi] remaining actions of the current chunk
             if cfg.task_suite_name.startswith("libero_spatial"):
                 max_steps = 220  # longest training demo has 193 steps
             elif cfg.task_suite_name == "libero_object":
@@ -322,6 +344,35 @@ def eval_libero(cfg: GenerateConfig) -> None:
                         t += 1
                         continue
 
+                    state = np.concatenate(
+                        (obs["robot0_eef_pos"], quat2axisangle(obs["robot0_eef_quat"]), obs["robot0_gripper_qpos"])
+                    )
+
+                    if cfg.model_family == "openpi":
+                        # [openpi] Mirrors openpi's examples/libero/main.py: agentview + wrist images, proprio
+                        # state, and an action chunk of which the first `replan_steps` actions are executed.
+                        # Actions come back in the env's own convention, so no gripper remapping.
+                        img, wrist_img = get_libero_images_openpi(obs, resize_size)
+                        replay_images.append(img)
+                        if not action_plan:
+                            action_chunk = model.infer({
+                                "observation/image": img,
+                                "observation/wrist_image": wrist_img,
+                                "observation/state": state,
+                                "prompt": str(task_description),
+                            })["actions"]
+                            assert len(action_chunk) >= cfg.replan_steps, (
+                                f"Policy predicts {len(action_chunk)} steps, fewer than replan_steps={cfg.replan_steps}."
+                            )
+                            action_plan.extend(action_chunk[: cfg.replan_steps])
+                        obs, reward, done, info = env.step(np.asarray(action_plan.popleft()).tolist())
+                        if done:
+                            task_successes += 1
+                            total_successes += 1
+                            break
+                        t += 1
+                        continue
+
                     # Get preprocessed image
                     img = get_libero_image(obs, resize_size)
 
@@ -332,9 +383,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
                     # Note: OpenVLA does not take proprio state as input
                     observation = {
                         "full_image": img,
-                        "state": np.concatenate(
-                            (obs["robot0_eef_pos"], quat2axisangle(obs["robot0_eef_quat"]), obs["robot0_gripper_qpos"])
-                        ),
+                        "state": state,
                     }
 
                     # Query model to get action

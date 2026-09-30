@@ -41,6 +41,11 @@ def get_model(cfg, wrap_diffusion_policy_for_droid=False):
     """Load model for evaluation."""
     if cfg.model_family == "openvla":
         model = get_vla(cfg)
+    elif cfg.model_family == "openpi":
+        # The policy runs in openpi's own server process; this is a websocket client to it.
+        from openpi_client import websocket_client_policy
+
+        model = websocket_client_policy.WebsocketClientPolicy(cfg.policy_host, cfg.policy_port)
     else:
         raise ValueError("Unexpected `model_family` found in config.")
     print(f"Loaded model: {type(model)}")
@@ -53,7 +58,7 @@ def get_image_resize_size(cfg):
     If `resize_size` is an int, then the resized image will be a square.
     Else, the image will be a rectangle.
     """
-    if cfg.model_family == "openvla":
+    if cfg.model_family in ("openvla", "openpi"):
         resize_size = 224
     else:
         raise ValueError("Unexpected `model_family` found in config.")

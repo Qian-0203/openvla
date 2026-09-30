@@ -58,6 +58,21 @@ def get_libero_image(obs, resize_size):
     return img
 
 
+def get_libero_images_openpi(obs, resize_size):
+    """Agentview and wrist images preprocessed the way openpi's LIBERO policies were trained.
+
+    Rotated 180 degrees like `get_libero_image`, but resized with padding and without the JPEG
+    round trip (openpi's examples/libero/main.py).
+    """
+    from openpi_client import image_tools  # only needed for openpi runs
+
+    images = []
+    for key in ("agentview_image", "robot0_eye_in_hand_image"):
+        img = np.ascontiguousarray(obs[key][::-1, ::-1])
+        images.append(image_tools.convert_to_uint8(image_tools.resize_with_pad(img, resize_size, resize_size)))
+    return tuple(images)
+
+
 def save_rollout_video(rollout_images, idx, success, task_description, log_file=None):
     """Saves an MP4 replay of an episode."""
     rollout_dir = f"./rollouts/{DATE}"
