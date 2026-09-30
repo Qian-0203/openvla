@@ -48,12 +48,18 @@ def resize_image(img, resize_size):
 
 
 def get_libero_image(obs, resize_size):
-    """Extracts image from observations and preprocesses it."""
+    """Extracts image from observations and preprocesses it.
+
+    `resize_size=None` returns the rotated raw render untouched (no JPEG round-trip, no resize),
+    for models that do their own preprocessing (model_family=qwenvla).
+    """
+    img = obs["agentview_image"]
+    img = img[::-1, ::-1]  # IMPORTANT: rotate 180 degrees to match train preprocessing
+    if resize_size is None:
+        return np.ascontiguousarray(img)
     assert isinstance(resize_size, int) or isinstance(resize_size, tuple)
     if isinstance(resize_size, int):
         resize_size = (resize_size, resize_size)
-    img = obs["agentview_image"]
-    img = img[::-1, ::-1]  # IMPORTANT: rotate 180 degrees to match train preprocessing
     img = resize_image(img, resize_size)
     return img
 
