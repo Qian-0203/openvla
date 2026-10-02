@@ -46,10 +46,37 @@ def get_model(cfg, wrap_diffusion_policy_for_droid=False):
         from experiments.robot.qwenvla_utils import get_qwenvla
 
         model = get_qwenvla(cfg)
+    elif cfg.model_family == "openpi":
+        # The policy runs in openpi's own server process; this is a websocket client to it.
+        model = _OpenpiClient(cfg.policy_host, cfg.policy_port)
     else:
         raise ValueError("Unexpected `model_family` found in config.")
     print(f"Loaded model: {type(model)}")
     return model
+
+
+def _OpenpiClient(host, port):
+    """openpi's WebsocketClientPolicy with keepalive pings off.
+
+    The server answers the first request only after JIT-compiling the model, which blocks its event
+    loop for longer than websockets' default 20s ping timeout (newer websockets releases ping from
+    the sync client; the version openpi pins does not), so the client would drop the connection.
+    """
+    import websockets.sync.client
+    from openpi_client import msgpack_numpy, websocket_client_policy
+
+    class Client(websocket_client_policy.WebsocketClientPolicy):
+        def _wait_for_server(self):
+            while True:
+                try:
+                    conn = websockets.sync.client.connect(
+                        self._uri, compression=None, max_size=None, ping_interval=None
+                    )
+                    return conn, msgpack_numpy.unpackb(conn.recv())
+                except ConnectionRefusedError:
+                    time.sleep(5)
+
+    return Client(host, port)
 
 
 def get_image_resize_size(cfg):
@@ -58,7 +85,7 @@ def get_image_resize_size(cfg):
     If `resize_size` is an int, then the resized image will be a square.
     Else, the image will be a rectangle.
     """
-    if cfg.model_family == "openvla":
+    if cfg.model_family in ("openvla", "openpi"):
         resize_size = 224
     elif cfg.model_family == "qwenvla":
         resize_size = None  # policy preprocesses the raw render itself (see qwenvla_utils.py)

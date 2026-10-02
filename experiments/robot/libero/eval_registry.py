@@ -15,10 +15,19 @@ benchmark split").
 from experiments.robot.libero.instructions import (
     LIBERO_SPATIAL_EXPLICIT_INSTRUCTIONS,
     LIBERO_SPATIAL_HARDNEG_INSTRUCTIONS,
+    LIBERO_SPATIAL_LENGTH_CONTROL_INFIX_INSTRUCTIONS,
+    LIBERO_SPATIAL_LENGTH_CONTROL_SUFFIX_INSTRUCTIONS,
+    LIBERO_SPATIAL_PARAPHRASE_LEXICAL_INSTRUCTIONS,
+    LIBERO_SPATIAL_PARAPHRASE_SYNTACTIC_INSTRUCTIONS,
     LIBERO_SPATIAL_POSITIVE_CONTRAST_INSTRUCTIONS,
     LIBERO_SPATIAL_TARGET_CUE_LANDMARK_INSTRUCTIONS,
+    LIBERO_SPATIAL_TARGET_CUE_PROXIMITY_ADJACENT_INSTRUCTIONS,
+    LIBERO_SPATIAL_TARGET_CUE_PROXIMITY_BESIDE_INSTRUCTIONS,
+    LIBERO_SPATIAL_TARGET_CUE_PROXIMITY_NEAR_INSTRUCTIONS,
     LIBERO_SPATIAL_TARGET_CUE_PROXIMITY_NOVEL_INSTRUCTIONS,
     LIBERO_SPATIAL_TARGET_CUE_REGION_INSTRUCTIONS,
+    LIBERO_SPATIAL_TARGET_CUE_REGION_V2_INSTRUCTIONS,
+    LIBERO_SPATIAL_TARGET_CUE_REGION_V3_INSTRUCTIONS,
 )
 
 # condition -> instruction dict (None = use LIBERO's own default task language)
@@ -30,6 +39,15 @@ CONDITIONS = {
     "target_cue_region": LIBERO_SPATIAL_TARGET_CUE_REGION_INSTRUCTIONS,
     "target_cue_landmark": LIBERO_SPATIAL_TARGET_CUE_LANDMARK_INSTRUCTIONS,
     "target_cue_proximity_novel": LIBERO_SPATIAL_TARGET_CUE_PROXIMITY_NOVEL_INSTRUCTIONS,
+    "length_control_infix": LIBERO_SPATIAL_LENGTH_CONTROL_INFIX_INSTRUCTIONS,
+    "length_control_suffix": LIBERO_SPATIAL_LENGTH_CONTROL_SUFFIX_INSTRUCTIONS,
+    "paraphrase_lexical": LIBERO_SPATIAL_PARAPHRASE_LEXICAL_INSTRUCTIONS,
+    "paraphrase_syntactic": LIBERO_SPATIAL_PARAPHRASE_SYNTACTIC_INSTRUCTIONS,
+    "target_cue_region_v2": LIBERO_SPATIAL_TARGET_CUE_REGION_V2_INSTRUCTIONS,
+    "target_cue_region_v3": LIBERO_SPATIAL_TARGET_CUE_REGION_V3_INSTRUCTIONS,
+    "target_cue_proximity_beside": LIBERO_SPATIAL_TARGET_CUE_PROXIMITY_BESIDE_INSTRUCTIONS,
+    "target_cue_proximity_near": LIBERO_SPATIAL_TARGET_CUE_PROXIMITY_NEAR_INSTRUCTIONS,
+    "target_cue_proximity_adjacent": LIBERO_SPATIAL_TARGET_CUE_PROXIMITY_ADJACENT_INSTRUCTIONS,
 }
 
 # split_id -> (task_suite_name, unnorm_key, condition, description)
@@ -49,6 +67,19 @@ SPLITS = {
     "spatial/positive_contrast": (
         "libero_spatial", "libero_spatial", "positive_contrast",
         "2 bowls, prompt mentions the distractor location without negating it.",
+    ),
+    # Length controls for the two contrast conditions above: native wording kept
+    # verbatim, a content-free politeness clause added at the contrast clause's
+    # position -- separates "longer prompt" from "second referent / off-template".
+    "spatial/length_control_infix": (
+        "libero_spatial", "libero_spatial", "length_control_infix",
+        "2 bowls, native prompt + ', if it is not too much trouble for you,' where negative_contrast's "
+        "'not the one ...' clause sits.",
+    ),
+    "spatial/length_control_suffix": (
+        "libero_spatial", "libero_spatial", "length_control_suffix",
+        "2 bowls, native prompt + '; thank you so very much in advance for your help with this' where "
+        "positive_contrast's '; the other black bowl is ...' clause sits.",
     ),
 
     # --- Split 2: Distractor Placement Probe (3-bowl scenes, default prompt) ---
@@ -156,6 +187,42 @@ SPLITS = {
         "never used in any native libero_spatial prompt -- same disclosed-approximate "
         "reading as target_cue_landmark ('next to X'), but lexically novel rather than "
         "a familiar template borrowed from tasks 0/1/6/8. Run with --task_ids 3 5 7 9.",
+    ),
+    "grounding/target_cue_proximity_beside": (
+        "libero_spatial", "libero_spatial", "target_cue_proximity_beside",
+        "As target_cue_proximity_novel, with 'beside X'. Run with --task_ids 3 5 7 9.",
+    ),
+    "grounding/target_cue_proximity_near": (
+        "libero_spatial", "libero_spatial", "target_cue_proximity_near",
+        "As target_cue_proximity_novel, with 'near X'. Run with --task_ids 3 5 7 9.",
+    ),
+    "grounding/target_cue_proximity_adjacent": (
+        "libero_spatial", "libero_spatial", "target_cue_proximity_adjacent",
+        "As target_cue_proximity_novel, with 'adjacent to X'. Run with --task_ids 3 5 7 9.",
+    ),
+
+    # --- Split 4b paraphrase controls: region-cue rewordings (same zones as
+    # target_cue_region) and the same-cue diagonal (native cue type, truthful,
+    # reworded) -- see benchmark_split_plan.md Split 4's 4b paraphrase section. ---
+    "grounding/target_cue_region_v2": (
+        "libero_spatial", "libero_spatial", "target_cue_region_v2",
+        "As target_cue_region, reworded as '<zone> area/part of the table'. "
+        "Run with --task_ids 0 1 3 5 6 7 8 9.",
+    ),
+    "grounding/target_cue_region_v3": (
+        "libero_spatial", "libero_spatial", "target_cue_region_v3",
+        "As target_cue_region, reworded side-first ('on the left side of the table, "
+        "toward the back'). Run with --task_ids 0 1 3 5 6 7 8 9.",
+    ),
+    "grounding/paraphrase_lexical": (
+        "libero_spatial", "libero_spatial", "paraphrase_lexical",
+        "Target in its native cue type, exactly truthful, one synonym swap or argument "
+        "reorder ('beside X', 'on top of X', ...). All 10 tasks.",
+    ),
+    "grounding/paraphrase_syntactic": (
+        "libero_spatial", "libero_spatial", "paraphrase_syntactic",
+        "Target in its native words, recast as a relative clause ('the black bowl that "
+        "is <where>'). All 10 tasks.",
     ),
 }
 
