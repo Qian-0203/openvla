@@ -67,7 +67,6 @@ from experiments.robot.libero.libero_utils import (
     quat2axisangle,
     save_rollout_video,
 )
-from experiments.robot.openvla_utils import get_processor
 from experiments.robot.robot_utils import (
     DATE_TIME,
     get_action,
@@ -98,6 +97,9 @@ class GenerateConfig:
 
     center_crop: bool = True                         # Center crop? (if trained w/ random crop image aug)
 
+    qwenvla_repo: Optional[str] = None               # (For QwenVLA only) Path to the qwen-vla checkout
+    dataset_statistics_path: Optional[str] = None    # (For QwenVLA only) Action norm stats JSON for the checkpoint
+
     #################################################################################################################
     # LIBERO environment-specific parameters
     #################################################################################################################
@@ -110,6 +112,10 @@ class GenerateConfig:
                                                        # applied on top of shard sharding. Default: all tasks in the suite.
     num_steps_wait: int = 10                         # Number of steps to wait for objects to stabilize in sim
     num_trials_per_task: int = 50                    # Number of rollouts per task
+    env_recreate_every: int = 0                      # Rebuild the env every N episodes (0 = never, the original
+                                                     # protocol). robosuite 1.4 re-merges robot XML on every reset
+                                                     # and resets slow down sharply after a few dozen on one env;
+                                                     # rebuilding re-seeds the env, so it is a protocol change.
 
     unnorm_key: Optional[str] = None                 # Action un-norm key override. Defaults to task_suite_name.
                                                      # Set this when evaluating a scene variant whose suite name
@@ -176,10 +182,14 @@ def eval_libero(cfg: GenerateConfig) -> None:
         if cfg.unnorm_key not in model.norm_stats and f"{cfg.unnorm_key}_no_noops" in model.norm_stats:
             cfg.unnorm_key = f"{cfg.unnorm_key}_no_noops"
         assert cfg.unnorm_key in model.norm_stats, f"Action un-norm key {cfg.unnorm_key} not found in VLA `norm_stats`!"
+    elif cfg.model_family == "qwenvla":
+        cfg.unnorm_key = model.unnorm_key  # resolved (e.g. "_no_noops" suffix) against the stats file
 
     # [OpenVLA] Get Hugging Face processor
     processor = None
     if cfg.model_family == "openvla":
+        from experiments.robot.openvla_utils import get_processor
+
         processor = get_processor(cfg)
 
     # Initialize local logging. `run_id` is timestamped (unique per invocation, matches
@@ -312,6 +322,10 @@ def eval_libero(cfg: GenerateConfig) -> None:
             print(f"\nTask: {task_description}")
             log_file.write(f"\nTask: {task_description}\n")
 
+            if cfg.env_recreate_every > 0 and task_episodes > 0 and task_episodes % cfg.env_recreate_every == 0:
+                env.close()
+                env, _ = get_libero_env(task, cfg.model_family, resolution=256)
+
             # Reset environment
             env.reset()
 
@@ -395,8 +409,11 @@ def eval_libero(cfg: GenerateConfig) -> None:
                         processor=processor,
                     )
 
-                    # Normalize gripper action [0,1] -> [-1,+1] because the environment expects the latter
-                    action = normalize_gripper_action(action, binarize=True)
+                    # [QwenVLA] trains on the raw LIBERO gripper (-1 = open, +1 = close) and already returns
+                    # it binarized in the env's convention, so neither remap below applies to it.
+                    if cfg.model_family != "qwenvla":
+                        # Normalize gripper action [0,1] -> [-1,+1] because the environment expects the latter
+                        action = normalize_gripper_action(action, binarize=True)
 
                     # [OpenVLA] The dataloader flips the sign of the gripper action to align with other datasets
                     # (0 = close, 1 = open), so flip it back (-1 = open, +1 = close) before executing the action

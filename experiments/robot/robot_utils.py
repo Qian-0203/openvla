@@ -7,10 +7,9 @@ import time
 import numpy as np
 import torch
 
-from experiments.robot.openvla_utils import (
-    get_vla,
-    get_vla_action,
-)
+# Model-family utils are imported inside the functions below, not here: openvla_utils needs
+# transformers 4.x (AutoModelForVision2Seq, prismatic), qwenvla_utils needs transformers 5.x,
+# and no single environment has both.
 
 # Initialize important constants and pretty-printing mode in NumPy.
 ACTION_DIM = 7
@@ -40,7 +39,13 @@ def set_seed_everywhere(seed: int):
 def get_model(cfg, wrap_diffusion_policy_for_droid=False):
     """Load model for evaluation."""
     if cfg.model_family == "openvla":
+        from experiments.robot.openvla_utils import get_vla
+
         model = get_vla(cfg)
+    elif cfg.model_family == "qwenvla":
+        from experiments.robot.qwenvla_utils import get_qwenvla
+
+        model = get_qwenvla(cfg)
     elif cfg.model_family == "openpi":
         # The policy runs in openpi's own server process; this is a websocket client to it.
         model = _OpenpiClient(cfg.policy_host, cfg.policy_port)
@@ -82,6 +87,8 @@ def get_image_resize_size(cfg):
     """
     if cfg.model_family in ("openvla", "openpi"):
         resize_size = 224
+    elif cfg.model_family == "qwenvla":
+        resize_size = None  # policy preprocesses the raw render itself (see qwenvla_utils.py)
     else:
         raise ValueError("Unexpected `model_family` found in config.")
     return resize_size
@@ -90,9 +97,16 @@ def get_image_resize_size(cfg):
 def get_action(cfg, model, obs, task_label, processor=None):
     """Queries the model to get an action."""
     if cfg.model_family == "openvla":
+        from experiments.robot.openvla_utils import get_vla_action
+
         action = get_vla_action(
             model, processor, cfg.pretrained_checkpoint, obs, task_label, cfg.unnorm_key, center_crop=cfg.center_crop
         )
+        assert action.shape == (ACTION_DIM,)
+    elif cfg.model_family == "qwenvla":
+        from experiments.robot.qwenvla_utils import get_qwenvla_action
+
+        action = get_qwenvla_action(model, obs, task_label)
         assert action.shape == (ACTION_DIM,)
     else:
         raise ValueError("Unexpected `model_family` found in config.")
