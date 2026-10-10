@@ -17,6 +17,7 @@ from experiments.robot.libero.instructions import (
     LIBERO_SPATIAL_HARDNEG_INSTRUCTIONS,
     LIBERO_SPATIAL_LENGTH_CONTROL_INFIX_INSTRUCTIONS,
     LIBERO_SPATIAL_LENGTH_CONTROL_SUFFIX_INSTRUCTIONS,
+    LIBERO_SPATIAL_NEGATION_ONLY_INSTRUCTIONS,
     LIBERO_SPATIAL_PARAPHRASE_LEXICAL_INSTRUCTIONS,
     LIBERO_SPATIAL_PARAPHRASE_SYNTACTIC_INSTRUCTIONS,
     LIBERO_SPATIAL_POSITIVE_CONTRAST_INSTRUCTIONS,
@@ -48,6 +49,7 @@ CONDITIONS = {
     "target_cue_proximity_beside": LIBERO_SPATIAL_TARGET_CUE_PROXIMITY_BESIDE_INSTRUCTIONS,
     "target_cue_proximity_near": LIBERO_SPATIAL_TARGET_CUE_PROXIMITY_NEAR_INSTRUCTIONS,
     "target_cue_proximity_adjacent": LIBERO_SPATIAL_TARGET_CUE_PROXIMITY_ADJACENT_INSTRUCTIONS,
+    "negation_only": LIBERO_SPATIAL_NEGATION_ONLY_INSTRUCTIONS,
 }
 
 # split_id -> (task_suite_name, unnorm_key, condition, description)
@@ -80,6 +82,11 @@ SPLITS = {
         "libero_spatial", "libero_spatial", "length_control_suffix",
         "2 bowls, native prompt + '; thank you so very much in advance for your help with this' where "
         "positive_contrast's '; the other black bowl is ...' clause sits.",
+    ),
+    "spatial/negation_only": (
+        "libero_spatial", "libero_spatial", "negation_only",
+        "2 bowls, target named only by negating the distractor: 'pick up the black bowl that is not "
+        "<distractor location> and place it on the plate'. The target's own location is never stated.",
     ),
 
     # --- Split 2: Distractor Placement Probe (3-bowl scenes, default prompt) ---

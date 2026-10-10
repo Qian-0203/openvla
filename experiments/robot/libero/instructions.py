@@ -412,3 +412,32 @@ LIBERO_SPATIAL_TARGET_CUE_PROXIMITY_ADJACENT_INSTRUCTIONS = {
     "pick_up_the_black_bowl_on_the_wooden_cabinet_and_place_it_on_the_plate":
         "pick up the black bowl adjacent to the wooden cabinet and place it on the plate",
 }
+
+
+# Negation-only reference (authored 2026-10-10, promoted from vla_ws screening/language_stress):
+# the target is identified ONLY by negating the distractor's location; the target's own location is
+# never named. Truthful in the stock 2-bowl scene (exactly one other black bowl). The distractor
+# phrases are the ones negative_contrast uses. Screening (5 trials/task): official OpenVLA 82% -> 2%,
+# pi05_libero 100% -> 44%.
+LIBERO_SPATIAL_NEGATION_ONLY_INSTRUCTIONS = {
+    "pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl that is not next to the ramekin and place it on the plate",
+    "pick_up_the_black_bowl_from_table_center_and_place_it_on_the_plate":
+        "pick up the black bowl that is not next to the plate and place it on the plate",
+    "pick_up_the_black_bowl_in_the_top_drawer_of_the_wooden_cabinet_and_place_it_on_the_plate":
+        "pick up the black bowl that is not on top of the cabinet and place it on the plate",
+    "pick_up_the_black_bowl_next_to_the_cookie_box_and_place_it_on_the_plate":
+        "pick up the black bowl that is not on the stove and place it on the plate",
+    "pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate":
+        "pick up the black bowl that is not next to the ramekin and place it on the plate",
+    "pick_up_the_black_bowl_next_to_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl that is not next to the cookie box and place it on the plate",
+    "pick_up_the_black_bowl_on_the_cookie_box_and_place_it_on_the_plate":
+        "pick up the black bowl that is not on top of the wooden cabinet and place it on the plate",
+    "pick_up_the_black_bowl_on_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl that is not on top of the cookie box and place it on the plate",
+    "pick_up_the_black_bowl_on_the_stove_and_place_it_on_the_plate":
+        "pick up the black bowl that is not on top of the wooden cabinet and place it on the plate",
+    "pick_up_the_black_bowl_on_the_wooden_cabinet_and_place_it_on_the_plate":
+        "pick up the black bowl that is not on the stove and place it on the plate",
+}
