@@ -67,6 +67,7 @@ from experiments.robot.libero.libero_utils import (
     get_libero_images_openpi,
     quat2axisangle,
     retarget_goal_to_distractor,
+    RolloutOutcomeTracker,
     save_rollout_video,
 )
 from experiments.robot.robot_utils import (
@@ -322,6 +323,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
         if swap_target:
             goal = retarget_goal_to_distractor(env)
             log_file.write(f"Success retargeted to the distractor: {goal}\n")
+        outcome = RolloutOutcomeTracker(env)  # reads the (possibly retargeted) goal, so build it after retarget
 
         # Optionally override the task language per cfg.condition (see eval_registry.CONDITIONS).
         # The scene/init states are identical; only the prompt fed to the model changes.
@@ -352,12 +354,14 @@ def eval_libero(cfg: GenerateConfig) -> None:
                 env, _ = get_libero_env(task, cfg.model_family, resolution=256)
                 if swap_target:
                     retarget_goal_to_distractor(env)
+                outcome = RolloutOutcomeTracker(env)
 
             # Reset environment
             env.reset()
 
             # Set initial states
             obs = env.set_init_state(initial_states[episode_idx])
+            outcome.start_episode()
 
             # Setup
             t = 0
@@ -384,6 +388,9 @@ def eval_libero(cfg: GenerateConfig) -> None:
                         obs, reward, done, info = env.step(get_libero_dummy_action(cfg.model_family))
                         t += 1
                         continue
+
+                    # Env-side outcome logging (every model family): observation before this step's action
+                    outcome.update(obs, t)
 
                     state = np.concatenate(
                         (obs["robot0_eef_pos"], quat2axisangle(obs["robot0_eef_quat"]), obs["robot0_gripper_qpos"])
@@ -478,6 +485,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
                 "episode_idx": episode_idx,
                 "success": bool(done),
                 "num_steps": t,
+                **outcome.result(),
             }) + "\n")
             results_file.flush()
 
