@@ -15,6 +15,28 @@ from experiments.robot.robot_utils import (
 )
 
 
+def retarget_goal_to_distractor(env, target="akita_black_bowl_1", distractor="akita_black_bowl_2"):
+    """Swap target and distractor in the task's goal predicates, so success means placing the *other* bowl.
+
+    For language-stress screening conditions whose instruction names the distractor bowl (vla_ws
+    screening/language_stress, `"swap_target": true`). The scene and init states are untouched; LIBERO
+    parses the goal once at env construction and `step()`'s done flag evaluates it, so this must be
+    called again after every env (re)creation. Only flat binary goals are supported, which covers every
+    libero_spatial task: `(On akita_black_bowl_1 plate_1)`.
+    """
+    problem = env.env.parsed_problem
+    names = str(problem["objects"])
+    assert target in names and distractor in names, f"Expected {target} and {distractor} in the scene: {names}"
+    swap = {target: distractor, distractor: target}
+    new_goal = []
+    for state in problem["goal_state"]:
+        assert len(state) == 3 and all(isinstance(tok, str) for tok in state), f"Unsupported goal predicate: {state}"
+        new_goal.append([swap.get(tok, tok) for tok in state])
+    assert new_goal != problem["goal_state"], f"Goal does not mention {target}: {problem['goal_state']}"
+    problem["goal_state"] = new_goal
+    return new_goal
+
+
 def get_libero_env(task, model_family, resolution=256):
     """Initializes and returns the LIBERO environment, along with the task description."""
     task_description = task.language

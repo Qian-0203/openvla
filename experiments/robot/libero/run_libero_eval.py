@@ -39,6 +39,7 @@ results file is an error.
 """
 
 import collections
+import hashlib
 import json
 import os
 import platform
@@ -65,6 +66,7 @@ from experiments.robot.libero.libero_utils import (
     get_libero_image,
     get_libero_images_openpi,
     quat2axisangle,
+    retarget_goal_to_distractor,
     save_rollout_video,
 )
 from experiments.robot.robot_utils import (
@@ -125,6 +127,10 @@ class GenerateConfig:
     condition: str = "default"                       # Instruction condition (see eval_registry.CONDITIONS):
                                                        # "default" | "negative_contrast" | "positive_contrast" | "hardneg".
                                                        # Scenes/init states are unchanged; only the prompt text changes.
+    instruction_file: Optional[str] = None           # Screening only: JSON of per-task instructions (vla_ws
+                                                     # screening/language_stress/). Replaces --condition; its
+                                                     # "condition" names the results file, optional "task_ids"
+                                                     # restricts tasks, optional "swap_target" retargets success.
 
     #################################################################################################################
     # Utils
@@ -164,7 +170,19 @@ def eval_libero(cfg: GenerateConfig) -> None:
     # those three fields are ignored when --split is given -- see eval_registry.py.
     if cfg.split is not None:
         cfg.task_suite_name, cfg.unnorm_key, cfg.condition = resolve_split(cfg.split)
-    assert cfg.condition in CONDITIONS, f"Unknown condition '{cfg.condition}'. Available: {sorted(CONDITIONS)}"
+    screen = None  # [Screening] candidate condition loaded from --instruction_file, outside the registry
+    if cfg.instruction_file is not None:
+        with open(cfg.instruction_file, "r") as f:
+            screen = json.load(f)
+        cfg.condition = screen["condition"]
+        assert cfg.condition not in CONDITIONS, (
+            f"Screening condition '{cfg.condition}' collides with a registry condition; rename it."
+        )
+        if cfg.task_ids is None and screen.get("task_ids"):
+            cfg.task_ids = ",".join(str(t) for t in screen["task_ids"])
+    else:
+        assert cfg.condition in CONDITIONS, f"Unknown condition '{cfg.condition}'. Available: {sorted(CONDITIONS)}"
+    swap_target = bool(screen is not None and screen.get("swap_target", False))
 
     # Set random seed
     set_seed_everywhere(cfg.seed)
@@ -254,6 +272,10 @@ def eval_libero(cfg: GenerateConfig) -> None:
         "cuda_available": torch.cuda.is_available(),
         "gpu_name": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,
     }
+    if screen is not None:
+        with open(cfg.instruction_file, "rb") as f:
+            screen_sha256 = hashlib.sha256(f.read()).hexdigest()
+        metadata["screening"] = {"instruction_file": cfg.instruction_file, "sha256": screen_sha256, **screen}
     if cfg.model_family == "openpi":
         metadata["policy_server_metadata"] = {k: str(v) for k, v in model.get_server_metadata().items()}
     with open(os.path.join(results_dir, run_key + ".meta.json"), "w") as f:
@@ -297,10 +319,13 @@ def eval_libero(cfg: GenerateConfig) -> None:
 
         # Initialize LIBERO environment and task description
         env, task_description = get_libero_env(task, cfg.model_family, resolution=256)
+        if swap_target:
+            goal = retarget_goal_to_distractor(env)
+            log_file.write(f"Success retargeted to the distractor: {goal}\n")
 
         # Optionally override the task language per cfg.condition (see eval_registry.CONDITIONS).
         # The scene/init states are identical; only the prompt fed to the model changes.
-        instruction_map = CONDITIONS[cfg.condition]
+        instruction_map = screen["instructions"] if screen is not None else CONDITIONS[cfg.condition]
         if instruction_map is not None:
             assert task.name in instruction_map, (
                 f"No '{cfg.condition}' instruction defined for task '{task.name}' "
@@ -325,6 +350,8 @@ def eval_libero(cfg: GenerateConfig) -> None:
             if cfg.env_recreate_every > 0 and task_episodes > 0 and task_episodes % cfg.env_recreate_every == 0:
                 env.close()
                 env, _ = get_libero_env(task, cfg.model_family, resolution=256)
+                if swap_target:
+                    retarget_goal_to_distractor(env)
 
             # Reset environment
             env.reset()
