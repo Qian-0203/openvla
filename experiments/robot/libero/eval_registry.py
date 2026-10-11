@@ -29,6 +29,9 @@ from experiments.robot.libero.instructions import (
     LIBERO_SPATIAL_TARGET_CUE_REGION_INSTRUCTIONS,
     LIBERO_SPATIAL_TARGET_CUE_REGION_V2_INSTRUCTIONS,
     LIBERO_SPATIAL_TARGET_CUE_REGION_V3_INSTRUCTIONS,
+    LIBERO_SPATIAL_TARGET_CUE_REGION_IMG_INSTRUCTIONS,
+    LIBERO_SPATIAL_TARGET_CUE_REGION_V2_IMG_INSTRUCTIONS,
+    LIBERO_SPATIAL_TARGET_CUE_REGION_V3_IMG_INSTRUCTIONS,
 )
 
 # condition -> instruction dict (None = use LIBERO's own default task language)
@@ -46,6 +49,10 @@ CONDITIONS = {
     "paraphrase_syntactic": LIBERO_SPATIAL_PARAPHRASE_SYNTACTIC_INSTRUCTIONS,
     "target_cue_region_v2": LIBERO_SPATIAL_TARGET_CUE_REGION_V2_INSTRUCTIONS,
     "target_cue_region_v3": LIBERO_SPATIAL_TARGET_CUE_REGION_V3_INSTRUCTIONS,
+    # Corrected (image-frame) region wording, Erratum E1 -- authored, not yet run.
+    "target_cue_region_img": LIBERO_SPATIAL_TARGET_CUE_REGION_IMG_INSTRUCTIONS,
+    "target_cue_region_v2_img": LIBERO_SPATIAL_TARGET_CUE_REGION_V2_IMG_INSTRUCTIONS,
+    "target_cue_region_v3_img": LIBERO_SPATIAL_TARGET_CUE_REGION_V3_IMG_INSTRUCTIONS,
     "target_cue_proximity_beside": LIBERO_SPATIAL_TARGET_CUE_PROXIMITY_BESIDE_INSTRUCTIONS,
     "target_cue_proximity_near": LIBERO_SPATIAL_TARGET_CUE_PROXIMITY_NEAR_INSTRUCTIONS,
     "target_cue_proximity_adjacent": LIBERO_SPATIAL_TARGET_CUE_PROXIMITY_ADJACENT_INSTRUCTIONS,
@@ -172,9 +179,17 @@ SPLITS = {
     # restricted to that subset, never the full 10-task suite. ---
     "grounding/target_cue_region": (
         "libero_spatial", "libero_spatial", "target_cue_region",
-        "Target rephrased as a table-zone/region description instead of its native "
-        "landmark or surface cue. Run with --task_ids 0 1 3 5 6 7 8 9 (task 2 is "
-        "already native region, task 4 is containment -- both excluded).",
+        "INVALID WORDING (Erratum E1, 2026-10-11): direction words use swapped axes and are "
+        "false for 7 of 8 tasks; kept so the old results stay reproducible. Use "
+        "grounding/target_cue_region_img. Target rephrased as a table-zone/region description "
+        "instead of its native landmark or surface cue. Run with --task_ids 0 1 3 5 6 7 8 9 "
+        "(task 2 is already native region, task 4 is containment -- both excluded).",
+    ),
+    "grounding/target_cue_region_img": (
+        "libero_spatial", "libero_spatial", "target_cue_region_img",
+        "Corrected region cue (Erratum E1): same table zones as target_cue_region, direction "
+        "words in the policy's image frame (left/right as seen, back = toward the robot base). "
+        "Authored, not yet run. Run with --task_ids 0 1 3 5 6 7 8 9.",
     ),
     "grounding/target_cue_landmark": (
         "libero_spatial", "libero_spatial", "target_cue_landmark",
@@ -213,13 +228,25 @@ SPLITS = {
     # reworded) -- see benchmark_split_plan.md Split 4's 4b paraphrase section. ---
     "grounding/target_cue_region_v2": (
         "libero_spatial", "libero_spatial", "target_cue_region_v2",
-        "As target_cue_region, reworded as '<zone> area/part of the table'. "
-        "Run with --task_ids 0 1 3 5 6 7 8 9.",
+        "INVALID WORDING (Erratum E1): swapped-axis direction words; use "
+        "grounding/target_cue_region_v2_img. As target_cue_region, reworded as "
+        "'<zone> area/part of the table'. Run with --task_ids 0 1 3 5 6 7 8 9.",
+    ),
+    "grounding/target_cue_region_v2_img": (
+        "libero_spatial", "libero_spatial", "target_cue_region_v2_img",
+        "Corrected (image-frame) counterpart of target_cue_region_v2 (Erratum E1). "
+        "Authored, not yet run. Run with --task_ids 0 1 3 5 6 7 8 9.",
     ),
     "grounding/target_cue_region_v3": (
         "libero_spatial", "libero_spatial", "target_cue_region_v3",
-        "As target_cue_region, reworded side-first ('on the left side of the table, "
-        "toward the back'). Run with --task_ids 0 1 3 5 6 7 8 9.",
+        "INVALID WORDING (Erratum E1): swapped-axis direction words; use "
+        "grounding/target_cue_region_v3_img. As target_cue_region, reworded side-first "
+        "('on the left side of the table, toward the back'). Run with --task_ids 0 1 3 5 6 7 8 9.",
+    ),
+    "grounding/target_cue_region_v3_img": (
+        "libero_spatial", "libero_spatial", "target_cue_region_v3_img",
+        "Corrected (image-frame) counterpart of target_cue_region_v3 (Erratum E1). "
+        "Authored, not yet run. Run with --task_ids 0 1 3 5 6 7 8 9.",
     ),
     "grounding/paraphrase_lexical": (
         "libero_spatial", "libero_spatial", "paraphrase_lexical",

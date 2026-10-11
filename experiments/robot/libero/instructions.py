@@ -99,6 +99,13 @@ LIBERO_SPATIAL_POSITIVE_CONTRAST_INSTRUCTIONS = {
 # would just duplicate that baseline. Task 2 (region, table_center) has no
 # nameable landmark object nearby and task 4 (containment) is out of scope
 # for Split 4's matrix (see benchmark_split_plan.md).
+# !! INVALID WORDING (2026-10-11 erratum): the left/right and front/back words below were derived
+# !! from BDDL (x, y) signs under a swapped-axis assumption (+x = right, +y = back). In the policy's
+# !! image +x is toward the camera (front) and +y is image-right, so the direction words are wrong
+# !! for 7 of 8 tasks (only task 3 is correct). Kept ONLY so the 2026-09/10 results stay
+# !! reproducible; do not run or cite them as a truthful region cue. Corrected wording:
+# !! LIBERO_SPATIAL_TARGET_CUE_REGION_IMG_INSTRUCTIONS below. See
+# !! docs/benchmark_split_result.md "Erratum E1".
 LIBERO_SPATIAL_TARGET_CUE_REGION_INSTRUCTIONS = {
     "pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate":
         "pick up the black bowl at the back of the table, just left of center, and place it on the plate",
@@ -334,6 +341,13 @@ LIBERO_SPATIAL_PARAPHRASE_SYNTACTIC_INSTRUCTIONS = {
 # side-first reordering ("on the left side of the table, toward the back").
 # Run with --task_ids 0 1 3 5 6 7 8 9, same as `grounding/target_cue_region`.
 # ---------------------------------------------------------------------------
+# !! INVALID WORDING (2026-10-11 erratum): the left/right and front/back words below were derived
+# !! from BDDL (x, y) signs under a swapped-axis assumption (+x = right, +y = back). In the policy's
+# !! image +x is toward the camera (front) and +y is image-right, so the direction words are wrong
+# !! for 7 of 8 tasks (only task 3 is correct). Kept ONLY so the 2026-09/10 results stay
+# !! reproducible; do not run or cite them as a truthful region cue. Corrected wording:
+# !! LIBERO_SPATIAL_TARGET_CUE_REGION_V2_IMG_INSTRUCTIONS below. See
+# !! docs/benchmark_split_result.md "Erratum E1".
 LIBERO_SPATIAL_TARGET_CUE_REGION_V2_INSTRUCTIONS = {
     "pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate":
         "pick up the black bowl in the back part of the table, slightly left of the middle, and place it on the plate",
@@ -353,6 +367,13 @@ LIBERO_SPATIAL_TARGET_CUE_REGION_V2_INSTRUCTIONS = {
         "pick up the black bowl in the front part of the table, slightly right of the middle, and place it on the plate",
 }
 
+# !! INVALID WORDING (2026-10-11 erratum): the left/right and front/back words below were derived
+# !! from BDDL (x, y) signs under a swapped-axis assumption (+x = right, +y = back). In the policy's
+# !! image +x is toward the camera (front) and +y is image-right, so the direction words are wrong
+# !! for 7 of 8 tasks (only task 3 is correct). Kept ONLY so the 2026-09/10 results stay
+# !! reproducible; do not run or cite them as a truthful region cue. Corrected wording:
+# !! LIBERO_SPATIAL_TARGET_CUE_REGION_V3_IMG_INSTRUCTIONS below. See
+# !! docs/benchmark_split_result.md "Erratum E1".
 LIBERO_SPATIAL_TARGET_CUE_REGION_V3_INSTRUCTIONS = {
     "pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate":
         "pick up the black bowl toward the back of the table, a little to the left, and place it on the plate",
@@ -370,6 +391,73 @@ LIBERO_SPATIAL_TARGET_CUE_REGION_V3_INSTRUCTIONS = {
         "pick up the black bowl all the way at the back of the table and place it on the plate",
     "pick_up_the_black_bowl_on_the_wooden_cabinet_and_place_it_on_the_plate":
         "pick up the black bowl toward the front of the table, a little to the right, and place it on the plate",
+}
+
+
+# ---------------------------------------------------------------------------
+# Split 4b region cue, corrected (2026-10-11, Erratum E1). Same 8 tasks and the same three
+# wording styles as the REGION / V2 / V3 dicts above, but the direction words are written in
+# the POLICY'S IMAGE FRAME: left/right as seen in the agentview image, "back" = toward the
+# robot base (top of the image), "front" = toward the camera (bottom of the image). In table
+# coordinates +x is front and +y is image-right. Each phrase was checked against the rendered
+# init state (docs/figures/region_wording_check.png). Task 3 is unchanged (it was already
+# correct). These are authored but NOT yet run. Run with --task_ids 0 1 3 5 6 7 8 9.
+# ---------------------------------------------------------------------------
+LIBERO_SPATIAL_TARGET_CUE_REGION_IMG_INSTRUCTIONS = {
+    "pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl at the back of the table, just right of center, and place it on the plate",
+    "pick_up_the_black_bowl_next_to_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl at the far back-right of the table and place it on the plate",
+    "pick_up_the_black_bowl_on_the_cookie_box_and_place_it_on_the_plate":
+        "pick up the black bowl near the center of the table and place it on the plate",
+    "pick_up_the_black_bowl_on_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl at the back-right of the table and place it on the plate",
+    "pick_up_the_black_bowl_next_to_the_cookie_box_and_place_it_on_the_plate":
+        "pick up the black bowl at the front of the table, just left of center, and place it on the plate",
+    "pick_up_the_black_bowl_on_the_stove_and_place_it_on_the_plate":
+        "pick up the black bowl at the back-left of the table and place it on the plate",
+    "pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate":
+        "pick up the black bowl at the far right of the table, midway between front and back, and place it on the plate",
+    "pick_up_the_black_bowl_on_the_wooden_cabinet_and_place_it_on_the_plate":
+        "pick up the black bowl at the far left of the table and place it on the plate",
+}
+
+LIBERO_SPATIAL_TARGET_CUE_REGION_V2_IMG_INSTRUCTIONS = {
+    "pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl in the back part of the table, slightly right of the middle, and place it on the plate",
+    "pick_up_the_black_bowl_next_to_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl in the back-right corner area of the table and place it on the plate",
+    "pick_up_the_black_bowl_on_the_cookie_box_and_place_it_on_the_plate":
+        "pick up the black bowl around the middle of the table and place it on the plate",
+    "pick_up_the_black_bowl_on_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl in the back-right area of the table and place it on the plate",
+    "pick_up_the_black_bowl_next_to_the_cookie_box_and_place_it_on_the_plate":
+        "pick up the black bowl in the front part of the table, slightly left of the middle, and place it on the plate",
+    "pick_up_the_black_bowl_on_the_stove_and_place_it_on_the_plate":
+        "pick up the black bowl in the back-left area of the table and place it on the plate",
+    "pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate":
+        "pick up the black bowl in the far-right area of the table, about midway back, and place it on the plate",
+    "pick_up_the_black_bowl_on_the_wooden_cabinet_and_place_it_on_the_plate":
+        "pick up the black bowl in the far-left area of the table and place it on the plate",
+}
+
+LIBERO_SPATIAL_TARGET_CUE_REGION_V3_IMG_INSTRUCTIONS = {
+    "pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl toward the back of the table, a little to the right, and place it on the plate",
+    "pick_up_the_black_bowl_next_to_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl on the right side of the table, all the way at the back and place it on the plate",
+    "pick_up_the_black_bowl_on_the_cookie_box_and_place_it_on_the_plate":
+        "pick up the black bowl roughly in the middle of the table and place it on the plate",
+    "pick_up_the_black_bowl_on_the_ramekin_and_place_it_on_the_plate":
+        "pick up the black bowl on the right side of the table, toward the back and place it on the plate",
+    "pick_up_the_black_bowl_next_to_the_cookie_box_and_place_it_on_the_plate":
+        "pick up the black bowl toward the front of the table, a little to the left, and place it on the plate",
+    "pick_up_the_black_bowl_on_the_stove_and_place_it_on_the_plate":
+        "pick up the black bowl on the left side of the table, toward the back and place it on the plate",
+    "pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate":
+        "pick up the black bowl on the right side of the table, all the way at the edge, about midway back, and place it on the plate",
+    "pick_up_the_black_bowl_on_the_wooden_cabinet_and_place_it_on_the_plate":
+        "pick up the black bowl on the left side of the table, all the way at the edge and place it on the plate",
 }
 
 
