@@ -99,6 +99,10 @@ class GenerateConfig:
     replan_steps: int = 5                            # (For openpi only) Actions executed per predicted chunk,
                                                      # matching openpi's examples/libero/main.py
 
+    policy_obs: str = "openpi"                       # (For openpi only) What is sent to the policy server: "openpi" =
+                                                     # frames resized with padding, as in openpi's LIBERO example;
+                                                     # "raw" = the 180-degree-rotated 256x256 renders, so a server that
+                                                     # wraps another model's own eval code preprocesses them itself
     oft_open_loop_steps: int = 8                     # (For openvla_oft only) Actions of each predicted 8-step chunk
                                                      # that are executed before re-querying (OFT executes all 8)
 
@@ -427,7 +431,11 @@ def eval_libero(cfg: GenerateConfig) -> None:
                         # [openpi] Mirrors openpi's examples/libero/main.py: agentview + wrist images, proprio
                         # state, and an action chunk of which the first `replan_steps` actions are executed.
                         # Actions come back in the env's own convention, so no gripper remapping.
-                        img, wrist_img = get_libero_images_openpi(obs, resize_size)
+                        if cfg.policy_obs == "raw":
+                            img = get_libero_image(obs, None)
+                            wrist_img = np.ascontiguousarray(obs["robot0_eye_in_hand_image"][::-1, ::-1])
+                        else:
+                            img, wrist_img = get_libero_images_openpi(obs, resize_size)
                         replay_images.append(img)
                         if not action_plan:
                             action_chunk = model.infer({
