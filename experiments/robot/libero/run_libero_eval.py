@@ -103,6 +103,10 @@ class GenerateConfig:
                                                      # frames resized with padding, as in openpi's LIBERO example;
                                                      # "raw" = the 180-degree-rotated 256x256 renders, so a server that
                                                      # wraps another model's own eval code preprocesses them itself
+    xvla_domain_id: int = 3                          # (For xvla only) X-VLA's LIBERO domain id
+    xvla_steps: int = 10                             # (For xvla only) flow-matching denoising steps per query
+    max_steps: int = 0                               # Episode horizon after the settle steps; 0 = the suite's usual
+                                                     # (libero_spatial 220). X-VLA's own protocol uses 800.
     oft_open_loop_steps: int = 8                     # (For openvla_oft only) Actions of each predicted 8-step chunk
                                                      # that are executed before re-querying (OFT executes all 8)
 
@@ -285,7 +289,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
         with open(cfg.instruction_file, "rb") as f:
             screen_sha256 = hashlib.sha256(f.read()).hexdigest()
         metadata["screening"] = {"instruction_file": cfg.instruction_file, "sha256": screen_sha256, **screen}
-    if cfg.model_family == "openpi":
+    if cfg.model_family in ("openpi", "xvla"):
         metadata["policy_server_metadata"] = {k: str(v) for k, v in model.get_server_metadata().items()}
     with open(os.path.join(results_dir, run_key + ".meta.json"), "w") as f:
         json.dump(metadata, f, indent=2)
@@ -386,6 +390,17 @@ def eval_libero(cfg: GenerateConfig) -> None:
             elif cfg.task_suite_name == "libero_90":
                 max_steps = 400  # longest training demo has 373 steps
 
+            if cfg.max_steps > 0:
+                max_steps = cfg.max_steps
+
+            # [X-VLA] Absolute-pose control, switched on after the settle steps (below); a delta controller again
+            # for this episode's reset and settle, because the env is reused across episodes.
+            xvla_abs = False
+            if cfg.model_family == "xvla":
+                for robot in env.env.robots:
+                    robot.controller.use_delta = True
+                model.reset()
+
             print(f"Starting episode {task_episodes+1}...")
             log_file.write(f"Starting episode {task_episodes+1}...\n")
             while t < max_steps + cfg.num_steps_wait:
@@ -403,6 +418,22 @@ def eval_libero(cfg: GenerateConfig) -> None:
                     state = np.concatenate(
                         (obs["robot0_eef_pos"], quat2axisangle(obs["robot0_eef_quat"]), obs["robot0_gripper_qpos"])
                     )
+
+                    if cfg.model_family == "xvla":
+                        # [X-VLA] Absolute end-effector poses, 30 actions executed per query; see xvla_utils.py.
+                        if not xvla_abs:
+                            for robot in env.env.robots:
+                                robot.controller.use_delta = False
+                            xvla_abs = True
+                        replay_images.append(get_libero_image(obs, None))
+                        action = model.act(obs, env.env.robots[0].controller, str(task_description))
+                        obs, reward, done, info = env.step(action.tolist())
+                        if done:
+                            task_successes += 1
+                            total_successes += 1
+                            break
+                        t += 1
+                        continue
 
                     if cfg.model_family == "openvla_oft":
                         # [OpenVLA-OFT] Two images + proprio in, a chunk of 8 continuous actions out, executed

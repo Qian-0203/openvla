@@ -54,6 +54,11 @@ def get_model(cfg, wrap_diffusion_policy_for_droid=False):
     elif cfg.model_family == "openpi":
         # The policy runs in openpi's own server process; this is a websocket client to it.
         model = _OpenpiClient(cfg.policy_host, cfg.policy_port)
+    elif cfg.model_family == "xvla":
+        # X-VLA runs in its own server (it pins its own transformers / timm); the protocol state lives client side.
+        from experiments.robot.xvla_utils import XVLAPolicy
+
+        model = XVLAPolicy(_OpenpiClient(cfg.policy_host, cfg.policy_port), cfg.xvla_domain_id, cfg.xvla_steps)
     else:
         raise ValueError("Unexpected `model_family` found in config.")
     print(f"Loaded model: {type(model)}")
@@ -92,8 +97,8 @@ def get_image_resize_size(cfg):
     """
     if cfg.model_family in ("openvla", "openvla_oft", "openpi"):
         resize_size = 224
-    elif cfg.model_family == "qwenvla":
-        resize_size = None  # policy preprocesses the raw render itself (see qwenvla_utils.py)
+    elif cfg.model_family in ("qwenvla", "xvla"):
+        resize_size = None  # the policy / its server preprocesses the raw render itself
     else:
         raise ValueError("Unexpected `model_family` found in config.")
     return resize_size
