@@ -171,6 +171,17 @@ SPLITS = {
         "Region-cue target (table center) + surface-cue distractor (on the stove).",
     ),
 
+    # --- Split 5: Landmark-exchange probe. New scene (cookie box and ramekin trade places); the
+    # sentences are each task's own libero_spatial sentence, unchanged. Only 4 of the 10 tasks exist
+    # in the suite, so no --task_ids restriction is needed -- the suite itself has 4 tasks. ---
+    "grounding/landmark_exchange": (
+        "libero_spatial_landmark_exchange", "libero_spatial", "default",
+        "Cookie box and ramekin swap places; native sentences, unchanged. The bowl a sentence describes "
+        "now sits where a different task's target was trained, and the trained coordinate holds the other "
+        "bowl. 4 tasks, ids 0-3 (= libero_spatial 1, 3, 5, 6); pairs (0, 3) and (1, 2) share a layout. "
+        "Outcome fields separate 'delivers the described bowl' from 'goes to the trained coordinate'.",
+    ),
+
     # --- Split 4b: Target Cue-Type Probe (same libero_spatial scene as spatial/default;
     # only the TARGET's phrasing changes, distractor never mentioned -- see
     # benchmark_split_plan.md Split 4's 4b section). Each condition's instruction dict
