@@ -170,6 +170,14 @@ SPLITS = {
     # only covers the task ids listed below -- run_libero_eval.py asserts
     # task.name in instruction_map, so these MUST be run with --task_ids
     # restricted to that subset, never the full 10-task suite. ---
+    "grounding/landmark_exchange": (
+        "libero_spatial_landmark_exchange", "libero_spatial", "default",
+        "Cookie box and ramekin swap places; native sentences, unchanged. The bowl a sentence describes "
+        "now sits where a different task's target was trained, and the trained coordinate holds the other "
+        "bowl. 4 tasks, ids 0-3 (= libero_spatial 1, 3, 5, 6); pairs (0, 3) and (1, 2) share a layout. "
+        "Outcome fields separate 'delivers the described bowl' from 'goes to the trained coordinate'.",
+    ),
+
     "grounding/target_cue_region": (
         "libero_spatial", "libero_spatial", "target_cue_region",
         "Target rephrased as a table-zone/region description instead of its native "
