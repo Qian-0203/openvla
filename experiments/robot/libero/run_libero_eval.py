@@ -65,6 +65,7 @@ from experiments.robot.libero.libero_utils import (
     get_libero_env,
     get_libero_image,
     get_libero_images_openpi,
+    get_libero_wrist_image,
     quat2axisangle,
     retarget_goal_to_distractor,
     RolloutOutcomeTracker,
@@ -97,6 +98,9 @@ class GenerateConfig:
     policy_port: int = 8000                          # (For openpi only) Policy server port
     replan_steps: int = 5                            # (For openpi only) Actions executed per predicted chunk,
                                                      # matching openpi's examples/libero/main.py
+
+    oft_open_loop_steps: int = 8                     # (For openvla_oft only) Actions of each predicted 8-step chunk
+                                                     # that are executed before re-querying (OFT executes all 8)
 
     center_crop: bool = True                         # Center crop? (if trained w/ random crop image aug)
 
@@ -195,7 +199,7 @@ def eval_libero(cfg: GenerateConfig) -> None:
     model = get_model(cfg)
 
     # [OpenVLA] Check that the model contains the action un-normalization key
-    if cfg.model_family == "openvla":
+    if cfg.model_family in ("openvla", "openvla_oft"):
         # In some cases, the key must be manually modified (e.g. after training on a modified version of the dataset
         # with the suffix "_no_noops" in the dataset name)
         if cfg.unnorm_key not in model.norm_stats and f"{cfg.unnorm_key}_no_noops" in model.norm_stats:
@@ -395,6 +399,29 @@ def eval_libero(cfg: GenerateConfig) -> None:
                     state = np.concatenate(
                         (obs["robot0_eef_pos"], quat2axisangle(obs["robot0_eef_quat"]), obs["robot0_gripper_qpos"])
                     )
+
+                    if cfg.model_family == "openvla_oft":
+                        # [OpenVLA-OFT] Two images + proprio in, a chunk of 8 continuous actions out, executed
+                        # open loop. Gripper handling is OpenVLA's: [0,1] -> [-1,+1], binarize, then flip the sign.
+                        img = get_libero_image(obs, resize_size)
+                        wrist_img = get_libero_wrist_image(obs, resize_size)
+                        replay_images.append(img)
+                        if not action_plan:
+                            chunk = model.predict_chunk(
+                                {"full_image": img, "wrist_image": wrist_img, "state": state},
+                                str(task_description),
+                                cfg.unnorm_key,
+                            )
+                            for a in chunk[: cfg.oft_open_loop_steps]:
+                                a = normalize_gripper_action(np.asarray(a), binarize=True)
+                                action_plan.append(invert_gripper_action(a))
+                        obs, reward, done, info = env.step(action_plan.popleft().tolist())
+                        if done:
+                            task_successes += 1
+                            total_successes += 1
+                            break
+                        t += 1
+                        continue
 
                     if cfg.model_family == "openpi":
                         # [openpi] Mirrors openpi's examples/libero/main.py: agentview + wrist images, proprio

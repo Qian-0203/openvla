@@ -195,6 +195,14 @@ def get_libero_image(obs, resize_size):
     return img
 
 
+def get_libero_wrist_image(obs, resize_size):
+    """Wrist-camera image, rotated 180 degrees and resized like `get_libero_image` (model_family=openvla_oft)."""
+    img = obs["robot0_eye_in_hand_image"][::-1, ::-1]
+    if isinstance(resize_size, int):
+        resize_size = (resize_size, resize_size)
+    return resize_image(img, resize_size)
+
+
 def get_libero_images_openpi(obs, resize_size):
     """Agentview and wrist images preprocessed the way openpi's LIBERO policies were trained.
 

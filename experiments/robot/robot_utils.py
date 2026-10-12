@@ -42,6 +42,11 @@ def get_model(cfg, wrap_diffusion_policy_for_droid=False):
         from experiments.robot.openvla_utils import get_vla
 
         model = get_vla(cfg)
+    elif cfg.model_family == "openvla_oft":
+        # OpenVLA-OFT: merged VLA + L1 action head + proprio projector, 2 images, 8-step chunks.
+        from experiments.robot.oft_utils import OFTPolicy
+
+        model = OFTPolicy(cfg)
     elif cfg.model_family == "qwenvla":
         from experiments.robot.qwenvla_utils import get_qwenvla
 
@@ -85,7 +90,7 @@ def get_image_resize_size(cfg):
     If `resize_size` is an int, then the resized image will be a square.
     Else, the image will be a rectangle.
     """
-    if cfg.model_family in ("openvla", "openpi"):
+    if cfg.model_family in ("openvla", "openvla_oft", "openpi"):
         resize_size = 224
     elif cfg.model_family == "qwenvla":
         resize_size = None  # policy preprocesses the raw render itself (see qwenvla_utils.py)
